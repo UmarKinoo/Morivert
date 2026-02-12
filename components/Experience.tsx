@@ -8,6 +8,7 @@ import { TextureType } from '../App';
 
 interface ExperienceProps {
   texture: TextureType;
+  isMobile?: boolean;
 }
 
 const MOBILE_BREAKPOINT = 768;
@@ -26,13 +27,13 @@ const _chromaticSpin = new THREE.Quaternion();
 const _yAxis = new THREE.Vector3(0, 1, 0); // pencil long axis is Y in local space
 const _euler = new THREE.Euler();
 
-export const Experience: React.FC<ExperienceProps> = ({ texture }) => {
+export const Experience: React.FC<ExperienceProps> = ({ texture, isMobile: isMobileProp }) => {
   const scroll = useScroll();
   const { size } = useThree();
   const pencilRef = useRef<THREE.Group>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera>(null);
 
-  const isMobile = size.width < MOBILE_BREAKPOINT;
+  const isMobile = isMobileProp ?? size.width < MOBILE_BREAKPOINT;
   const pencilScale = isMobile ? 0.72 : 1;
   const heroOffsetX = isMobile ? 0.35 : 0.9;
 
@@ -161,7 +162,7 @@ export const Experience: React.FC<ExperienceProps> = ({ texture }) => {
       
       {/* Fix: Using capitalized Group constant */}
       <Group ref={pencilRef}>
-        <Pencil sproutProgress={sproutState} usedProgress={usedState} texture={texture} />
+        <Pencil sproutProgress={sproutState} usedProgress={usedState} texture={texture} isMobile={isMobile} />
       </Group>
 
       {/* Ground plane for shadows */}

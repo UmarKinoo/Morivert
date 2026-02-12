@@ -8,6 +8,7 @@ interface PencilProps {
   sproutProgress: React.MutableRefObject<number>;
   usedProgress: React.MutableRefObject<number>;
   texture: TextureType;
+  isMobile?: boolean;
 }
 
 // Fix: Use capitalized constants to bypass missing JSX intrinsic types
@@ -20,28 +21,39 @@ const MeshStandardMaterial = 'meshStandardMaterial' as any;
 const MeshPhysicalMaterial = 'meshPhysicalMaterial' as any;
 const Primitive = 'primitive' as any;
 
-export const Pencil: React.FC<PencilProps> = ({ sproutProgress, usedProgress, texture }) => {
+const TEX_SIZE_DESKTOP = { w: 512, h: 1024 };
+const TEX_SIZE_MOBILE = { w: 256, h: 512 };
+const CAPSULE_SEGMENTS = 16;
+const CAPSULE_SEGMENTS_MOBILE = 8;
+const SPHERE_SEGMENTS = 8;
+const SPHERE_SEGMENTS_MOBILE = 6;
+
+export const Pencil: React.FC<PencilProps> = ({ sproutProgress, usedProgress, texture, isMobile = false }) => {
   const sproutRef = useRef<THREE.Group>(null);
   const bodyRef = useRef<THREE.Group>(null);
   const tipRef = useRef<THREE.Group>(null);
   const leadRef = useRef<THREE.Group>(null);
 
-  // Procedural Texture Generation
+  const texSize = isMobile ? TEX_SIZE_MOBILE : TEX_SIZE_DESKTOP;
+  const capSeg = isMobile ? CAPSULE_SEGMENTS_MOBILE : CAPSULE_SEGMENTS;
+  const sphSeg = isMobile ? SPHERE_SEGMENTS_MOBILE : SPHERE_SEGMENTS;
+
+  // Procedural Texture Generation — lower res on mobile
   const canvasTexture = useMemo(() => {
     const canvas = document.createElement('canvas');
-    canvas.width = 512;
-    canvas.height = 1024;
+    canvas.width = texSize.w;
+    canvas.height = texSize.h;
     const ctx = canvas.getContext('2d');
     if (!ctx) return null;
 
     const drawMoriPattern = (bg: string, stroke: string, count = 60) => {
       ctx.fillStyle = bg;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillRect(0, 0, texSize.w, texSize.h);
       ctx.strokeStyle = stroke;
       ctx.lineWidth = 3;
       for (let i = 0; i < count; i++) {
-        const x = Math.random() * canvas.width;
-        const y = Math.random() * canvas.height;
+        const x = Math.random() * texSize.w;
+        const y = Math.random() * texSize.h;
         ctx.beginPath();
         ctx.moveTo(x, y);
         ctx.lineTo(x + 15, y - 25);
@@ -169,7 +181,7 @@ export const Pencil: React.FC<PencilProps> = ({ sproutProgress, usedProgress, te
     tex.wrapS = THREE.RepeatWrapping;
     tex.wrapT = THREE.RepeatWrapping;
     return tex;
-  }, [texture]);
+  }, [texture, isMobile]);
 
   // Materials
   const woodMaterial = useMemo(() => new THREE.MeshStandardMaterial({
@@ -184,14 +196,23 @@ export const Pencil: React.FC<PencilProps> = ({ sproutProgress, usedProgress, te
     metalness: 0.7,
   }), []);
 
-  const capsuleMaterial = useMemo(() => new THREE.MeshPhysicalMaterial({
-    color: '#ffffff',
-    transparent: true,
-    opacity: 0.3,
-    transmission: 0.9,
-    thickness: 0.5,
-    roughness: 0.1,
-  }), []);
+  // MeshPhysicalMaterial (transmission) is costly on mobile; use MeshStandardMaterial
+  const capsuleMaterial = useMemo(() => (isMobile
+    ? new THREE.MeshStandardMaterial({
+        color: '#ffffff',
+        transparent: true,
+        opacity: 0.35,
+        roughness: 0.2,
+        metalness: 0.05,
+      })
+    : new THREE.MeshPhysicalMaterial({
+        color: '#ffffff',
+        transparent: true,
+        opacity: 0.3,
+        transmission: 0.9,
+        thickness: 0.5,
+        roughness: 0.1,
+      })), [isMobile]);
 
   const greenMaterial = useMemo(() => new THREE.MeshStandardMaterial({
     color: '#4ade80',
@@ -254,20 +275,20 @@ export const Pencil: React.FC<PencilProps> = ({ sproutProgress, usedProgress, te
       {/* Seed Capsule */}
       <Group position={[0, 1.35, 0]}>
         <Mesh castShadow>
-          <CylinderGeometry args={[0.081, 0.081, 0.3, 16]} />
+          <CylinderGeometry args={[0.081, 0.081, 0.3, capSeg]} />
           <Primitive object={capsuleMaterial} attach="material" />
         </Mesh>
         
         <Mesh position={[0, -0.05, 0.02]}>
-          <SphereGeometry args={[0.015, 8, 8]} />
+          <SphereGeometry args={[0.015, sphSeg, sphSeg]} />
           <MeshStandardMaterial color="#4a3728" />
         </Mesh>
         <Mesh position={[0.02, 0, -0.02]}>
-          <SphereGeometry args={[0.012, 8, 8]} />
+          <SphereGeometry args={[0.012, sphSeg, sphSeg]} />
           <MeshStandardMaterial color="#3d2b1f" />
         </Mesh>
         <Mesh position={[-0.02, 0.05, 0.01]}>
-          <SphereGeometry args={[0.018, 8, 8]} />
+          <SphereGeometry args={[0.018, sphSeg, sphSeg]} />
           <MeshStandardMaterial color="#5c4033" />
         </Mesh>
       </Group>
@@ -275,11 +296,11 @@ export const Pencil: React.FC<PencilProps> = ({ sproutProgress, usedProgress, te
       {/* Sprout — small green balls floating inside the capsule */}
       <Group ref={sproutRef} scale={0} position={[0, 1.35, 0]}>
          <Mesh rotation={[0, 0, 0.4]} position={[0.03, 0.01, 0.02]}>
-            <SphereGeometry args={[0.04, 8, 8]} />
+            <SphereGeometry args={[0.04, sphSeg, sphSeg]} />
             <Primitive object={greenMaterial} attach="material" />
          </Mesh>
          <Mesh rotation={[0, 0, -0.4]} position={[-0.03, 0.01, -0.02]}>
-            <SphereGeometry args={[0.04, 8, 8]} />
+            <SphereGeometry args={[0.04, sphSeg, sphSeg]} />
             <Primitive object={greenMaterial} attach="material" />
          </Mesh>
          <Mesh position={[0, -0.02, 0]}>

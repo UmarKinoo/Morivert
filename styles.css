@@ -29,3 +29,26 @@ input[type="number"]::-webkit-inner-spin-button {
 input[type="number"] {
   -moz-appearance: textfield;
 }
+
+/* Scroll content (drei ScrollControls) above blurred grain layer on mobile */
+.flex-1.min-h-0 > div:last-of-type {
+  position: relative;
+  z-index: 10;
+}
+
+/* Grain overlay (mobile): subtle animated film grain over 3D canvas only */
+.grain-overlay {
+  animation: grain 0.4s steps(1) infinite;
+}
+@keyframes grain {
+  0%, 100% { background-position: 0 0; }
+  10% { background-position: -5% -10%; }
+  20% { background-position: -15% 5%; }
+  30% { background-position: 7% -25%; }
+  40% { background-position: -5% 25%; }
+  50% { background-position: -15% 10%; }
+  60% { background-position: 15% 0; }
+  70% { background-position: 0 15%; }
+  80% { background-position: 3% 35%; }
+  90% { background-position: -10% 10%; }
+}
