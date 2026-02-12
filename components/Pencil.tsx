@@ -6,6 +6,7 @@ import { TextureType } from '../App';
 
 interface PencilProps {
   sproutProgress: React.MutableRefObject<number>;
+  usedProgress: React.MutableRefObject<number>;
   texture: TextureType;
 }
 
@@ -19,8 +20,11 @@ const MeshStandardMaterial = 'meshStandardMaterial' as any;
 const MeshPhysicalMaterial = 'meshPhysicalMaterial' as any;
 const Primitive = 'primitive' as any;
 
-export const Pencil: React.FC<PencilProps> = ({ sproutProgress, texture }) => {
+export const Pencil: React.FC<PencilProps> = ({ sproutProgress, usedProgress, texture }) => {
   const sproutRef = useRef<THREE.Group>(null);
+  const bodyRef = useRef<THREE.Group>(null);
+  const tipRef = useRef<THREE.Group>(null);
+  const leadRef = useRef<THREE.Group>(null);
 
   // Procedural Texture Generation
   const canvasTexture = useMemo(() => {
@@ -197,32 +201,55 @@ export const Pencil: React.FC<PencilProps> = ({ sproutProgress, texture }) => {
   useFrame(() => {
     if (sproutRef.current) {
       const p = sproutProgress.current;
-      sproutRef.current.scale.setScalar(p * 0.4);
-      sproutRef.current.position.y = 1.35 + (p * 0.1);
+      sproutRef.current.scale.setScalar(p * 0.22);
+      sproutRef.current.position.y = 1.35;
       sproutRef.current.rotation.y += 0.01;
+    }
+    // "Used up" pencil: body shrinks from full to stub, tip and lead disappear
+    const u = usedProgress.current;
+    if (bodyRef.current) {
+      // Body shrinks: scaleY from 1→0.15 (small stub above capsule), moves up to stay attached to capsule
+      const bodyScale = THREE.MathUtils.lerp(1, 0.15, u);
+      bodyRef.current.scale.set(1, bodyScale, 1);
+      bodyRef.current.position.y = THREE.MathUtils.lerp(0, 1.05, u);
+    }
+    if (tipRef.current) {
+      // Tip disappears first (0→0.4 of used progress)
+      const tipFade = THREE.MathUtils.smoothstep(u, 0, 0.4);
+      tipRef.current.scale.setScalar(1 - tipFade);
+    }
+    if (leadRef.current) {
+      // Lead disappears first (0→0.3 of used progress)
+      const leadFade = THREE.MathUtils.smoothstep(u, 0, 0.3);
+      leadRef.current.scale.setScalar(1 - leadFade);
     }
   });
 
   return (
     <Group rotation={[0, 0, 0]}>
-      {/* Pencil Body */}
-      {/* Fix: Using capitalized constant Mesh and Primitive */}
-      <Mesh position={[0, 0, 0]} castShadow>
-        <CylinderGeometry args={[0.08, 0.08, 2.5, 6]} />
-        <Primitive object={woodMaterial} attach="material" />
-      </Mesh>
+      {/* Pencil Body — shrinks when "used up" */}
+      <Group ref={bodyRef}>
+        <Mesh position={[0, 0, 0]} castShadow>
+          <CylinderGeometry args={[0.08, 0.08, 2.5, 6]} />
+          <Primitive object={woodMaterial} attach="material" />
+        </Mesh>
+      </Group>
 
-      {/* The Wood Tip */}
-      <Mesh position={[0, -1.45, 0]} castShadow>
-        <CylinderGeometry args={[0.08, 0.02, 0.4, 6]} />
-        <Primitive object={woodMaterial} attach="material" />
-      </Mesh>
+      {/* The Wood Tip — disappears first when used */}
+      <Group ref={tipRef}>
+        <Mesh position={[0, -1.45, 0]} castShadow>
+          <CylinderGeometry args={[0.08, 0.02, 0.4, 6]} />
+          <Primitive object={woodMaterial} attach="material" />
+        </Mesh>
+      </Group>
 
-      {/* The Lead Point */}
-      <Mesh position={[0, -1.7, 0]} rotation={[Math.PI, 0, 0]} castShadow>
-        <ConeGeometry args={[0.02, 0.1, 6]} />
-        <Primitive object={graphiteMaterial} attach="material" />
-      </Mesh>
+      {/* The Lead Point — disappears first when used */}
+      <Group ref={leadRef}>
+        <Mesh position={[0, -1.7, 0]} rotation={[Math.PI, 0, 0]} castShadow>
+          <ConeGeometry args={[0.02, 0.1, 6]} />
+          <Primitive object={graphiteMaterial} attach="material" />
+        </Mesh>
+      </Group>
 
       {/* Seed Capsule */}
       <Group position={[0, 1.35, 0]}>
@@ -245,18 +272,18 @@ export const Pencil: React.FC<PencilProps> = ({ sproutProgress, texture }) => {
         </Mesh>
       </Group>
 
-      {/* Sprout */}
-      <Group ref={sproutRef} scale={0} position={[0, 1.3, 0]}>
-         <Mesh rotation={[0, 0, 0.5]} position={[0.1, 0.1, 0]}>
-            <SphereGeometry args={[0.2, 8, 8]} scale={[1, 0.1, 0.5]} />
+      {/* Sprout — small green balls floating inside the capsule */}
+      <Group ref={sproutRef} scale={0} position={[0, 1.35, 0]}>
+         <Mesh rotation={[0, 0, 0.4]} position={[0.03, 0.01, 0.02]}>
+            <SphereGeometry args={[0.04, 8, 8]} />
             <Primitive object={greenMaterial} attach="material" />
          </Mesh>
-         <Mesh rotation={[0, 0, -0.5]} position={[-0.1, 0.1, 0]}>
-            <SphereGeometry args={[0.2, 8, 8]} scale={[1, 0.1, 0.5]} />
+         <Mesh rotation={[0, 0, -0.4]} position={[-0.03, 0.01, -0.02]}>
+            <SphereGeometry args={[0.04, 8, 8]} />
             <Primitive object={greenMaterial} attach="material" />
          </Mesh>
-         <Mesh position={[0, -0.05, 0]}>
-            <CylinderGeometry args={[0.015, 0.015, 0.4]} />
+         <Mesh position={[0, -0.02, 0]}>
+            <CylinderGeometry args={[0.006, 0.006, 0.06]} />
             <Primitive object={greenMaterial} attach="material" />
          </Mesh>
       </Group>
