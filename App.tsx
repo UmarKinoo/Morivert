@@ -32,7 +32,8 @@ function App() {
   const handleOverlayHeight = useCallback((heightPx: number) => {
     if (heightPx <= 0) return;
     const vh = typeof window !== 'undefined' ? window.innerHeight : 900;
-    const pages = Math.max(1, heightPx / vh) || 10;
+    // Add a tiny buffer (0.05) so the footer isn't cut off on mobile
+    const pages = Math.max(1, heightPx / vh + 0.05) || 10;
     setScrollPages(pages);
   }, []);
 

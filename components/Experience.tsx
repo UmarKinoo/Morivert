@@ -97,12 +97,14 @@ export const Experience: React.FC<ExperienceProps> = ({ texture }) => {
 
       // SECTION: Footer approach — pencil becomes "used up" and sinks behind footer
       // Used-up animation: body shrinks, tip/lead vanish, only capsule remains
-      const sUsed = THREE.MathUtils.smoothstep(offset, 0.82, 0.96);
+      // Start later on mobile (more sections per scroll) to keep planting pose longer
+      const usedStart = isMobile ? 0.85 : 0.82;
+      const sUsed = THREE.MathUtils.smoothstep(offset, usedStart, 0.97);
       usedState.current = sUsed;
-      sproutState.current = THREE.MathUtils.smoothstep(offset, 0.92, 1.0);
+      sproutState.current = THREE.MathUtils.smoothstep(offset, 0.94, 1.0);
 
-      // Sink down behind the footer as it shrinks
-      pencilRef.current.position.y = THREE.MathUtils.lerp(0, -2.5, sUsed);
+      // Sink down behind the footer — less distance needed since the pencil is shrinking too
+      pencilRef.current.position.y = THREE.MathUtils.lerp(0, -1.8, sUsed);
 
       // Keep planting orientation all the way to footer — no diagonal override
       const finalRotX = plantingRotX;
