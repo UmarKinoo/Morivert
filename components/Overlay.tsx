@@ -356,8 +356,8 @@ export const Overlay: React.FC<OverlayProps> = ({ currentTexture, onTextureChang
         </motion.div>
       </Section>
 
-      {/* Footer — WHITE, last scrollable; min-h-screen so it fills viewport and sits at bottom: 0 */}
-      <footer className="bg-[#fafafa] text-neutral-900 w-screen min-h-screen flex flex-col">
+      {/* Footer — WHITE, last scrollable; min-h-screen + min-h-[100dvh] on mobile so bottom is always viewport bottom */}
+      <footer className="bg-[#fafafa] text-neutral-900 w-screen min-h-screen min-h-[100dvh] flex flex-col">
         <div className="max-w-7xl mx-auto px-10 md:px-24 py-16 md:py-24 flex-1 flex flex-col justify-end">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-12 md:gap-8 mb-16">
             <div className="space-y-4">
