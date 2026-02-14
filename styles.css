@@ -52,3 +52,9 @@ input[type="number"] {
   80% { background-position: 3% 35%; }
   90% { background-position: -10% 10%; }
 }
+
+/* Partnerships logo marquee (infinite scroll) */
+@keyframes partnerships-marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}

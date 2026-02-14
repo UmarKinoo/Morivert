@@ -67,7 +67,6 @@ export const Header: React.FC<HeaderProps> = ({ setView, currentView }) => {
         >
           Get Quote
         </button>
-        <a href="#" className="hover:text-white transition-colors">Story</a>
 
         {user ? (
           <>

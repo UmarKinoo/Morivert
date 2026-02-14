@@ -122,6 +122,21 @@ export const Overlay: React.FC<OverlayProps> = ({ currentTexture, onTextureChang
     { title: "Mandela Fellowship", desc: "Recognized for social and environmental leadership." }
   ];
 
+  const partnershipLogos = [
+    { src: '/partnerships/pepsi2.png', name: 'Pepsi' },
+    { src: '/partnerships/airfrance.png', name: 'Air France' },
+    { src: '/partnerships/beachcomber.png', name: 'Beachcomber' },
+    { src: '/partnerships/ccare.png', name: 'C-Care' },
+    { src: '/partnerships/chamarel.png', name: 'Chamarel' },
+    { src: '/partnerships/currimjee.png', name: 'Currimjee' },
+    { src: '/partnerships/iom.png', name: 'IOM' },
+    { src: '/partnerships/MPTP.png', name: 'MPTP' },
+    { src: '/partnerships/phoenix-mall.png', name: 'Phoenix Mall' },
+    { src: '/partnerships/royal-kids.png', name: 'Royal Kids' },
+    { src: '/partnerships/sbm.png', name: 'SBM' },
+    { src: '/partnerships/taylorsmith.png', name: 'Taylor Smith' },
+  ];
+
   const products = [
     { name: "Plantable Pencils", type: "pencil", tagline: "The flagship circular tool." },
     { name: "Plantable Notebooks", type: "notebook", tagline: "Pages that become petals." },
@@ -132,42 +147,50 @@ export const Overlay: React.FC<OverlayProps> = ({ currentTexture, onTextureChang
 
   return (
     <div ref={rootRef} className="w-screen">
-      {/* 1. Hero */}
-      <Section className="justify-end pb-32 md:pb-40">
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1, ease: [0.25, 0.1, 0.25, 1] }}
-          viewport={{ margin: "-10%" }}
-          className="space-y-8 md:space-y-10 max-w-4xl"
+      {/* 1. Hero — text left ~45%, pencil right ~55% */}
+      <section className="min-h-screen flex flex-col justify-center px-10 md:px-24 py-20 relative">
+        <div className="max-w-7xl mx-auto w-full">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 1, ease: [0.25, 0.1, 0.25, 1] }}
+            viewport={{ margin: "-10%" }}
+            className="space-y-6 md:space-y-8 max-w-xl md:max-w-2xl"
+          >
+            <h1 className="text-[clamp(2.4rem,5.5vw,5rem)] font-extralight tracking-[-0.04em] leading-[1.08]">
+              Designed to Be Used.
+              <br />
+              Made to Be Planted.
+            </h1>
+            <p className="text-base sm:text-lg md:text-xl text-white/40 font-light max-w-md leading-relaxed tracking-tight">
+              Plantable stationery made from recycled paper&nbsp;— customised for brands, schools, and institutions.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-2">
+              <button
+                onClick={() => setView('calculator')}
+                className="bg-white text-black px-7 sm:px-8 py-3.5 sm:py-4 rounded-full text-[13px] tracking-wide font-medium hover:bg-white/90 transition-colors"
+              >
+                Calculate Your Impact
+              </button>
+              <button
+                onClick={() => (onNavigate ? onNavigate('/quote') : setView('quote'))}
+                className="bg-white/10 text-white/90 border border-white/15 px-7 sm:px-8 py-3.5 sm:py-4 rounded-full text-[13px] tracking-wide font-medium hover:bg-white/15 transition-colors backdrop-blur-sm"
+              >
+                Get an Instant Quote
+              </button>
+            </div>
+          </motion.div>
+        </div>
+        {/* Scroll indicator — pinned to bottom of hero viewport */}
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1.5, duration: 1 }}
+          className="absolute bottom-8 md:bottom-12 left-10 md:left-24 text-[10px] tracking-[0.25em] uppercase font-light text-white/30"
         >
-          <h1 className="text-[clamp(2.4rem,6vw,5.5rem)] font-extralight tracking-[-0.04em] leading-[1.08]">
-            Designed to Be Used.
-            <br />
-            Made to Be Planted.
-          </h1>
-          <p className="text-base sm:text-lg md:text-xl text-white/40 font-light max-w-lg leading-relaxed tracking-tight">
-            Plantable stationery made from recycled paper&nbsp;— customised for brands, schools, and institutions.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-2">
-            <button
-              onClick={() => setView('calculator')}
-              className="bg-white text-black px-7 sm:px-8 py-3.5 sm:py-4 rounded-full text-[13px] tracking-wide font-medium hover:bg-white/90 transition-colors"
-            >
-              Calculate Your Impact
-            </button>
-            <button
-              onClick={() => (onNavigate ? onNavigate('/quote') : setView('quote'))}
-              className="bg-white/10 text-white/90 border border-white/15 px-7 sm:px-8 py-3.5 sm:py-4 rounded-full text-[13px] tracking-wide font-medium hover:bg-white/15 transition-colors backdrop-blur-sm"
-            >
-              Get an Instant Quote
-            </button>
-          </div>
-          <p className="text-[10px] tracking-[0.25em] uppercase font-light text-white/30 pt-16 md:pt-24">
-            Scroll to explore
-          </p>
-        </motion.div>
-      </Section>
+          Scroll to explore
+        </motion.p>
+      </section>
 
       {/* 2. Bold Statement */}
       <Section className="items-center text-center">
@@ -187,8 +210,8 @@ export const Overlay: React.FC<OverlayProps> = ({ currentTexture, onTextureChang
         </motion.div>
       </Section>
 
-      {/* 3. Awards & Credibility — WHITE */}
-      <Section light>
+      {/* 3. Awards & Credibility — WHITE (tighter bottom so Partnerships feels connected) */}
+      <Section light className="!pb-12 md:!pb-16">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
           <div className="lg:col-span-4 space-y-4">
             <h3 className="text-xs uppercase tracking-[0.4em] text-emerald-600 font-semibold">Credibility</h3>
@@ -206,6 +229,37 @@ export const Overlay: React.FC<OverlayProps> = ({ currentTexture, onTextureChang
                 <div className="text-[11px] text-neutral-500 uppercase tracking-widest leading-relaxed">{a.desc}</div>
               </motion.div>
             ))}
+          </div>
+        </div>
+      </Section>
+
+      {/* 3b. Partnerships — logo slider (tighter top to pair with Awards) */}
+      <Section light className="!pt-10 md:!pt-12 !pb-12 md:!pb-16">
+        <div className="w-full">
+          <h3 className="text-xs uppercase tracking-[0.4em] text-emerald-600 font-semibold mb-2">Trusted by</h3>
+          <h2 className="text-3xl md:text-4xl font-light tracking-tight text-neutral-900 mb-10 md:mb-12">Partnerships.</h2>
+          <div className="overflow-hidden w-full -mx-10 md:-mx-24">
+            <div
+              className="flex w-max gap-10 md:gap-16 items-center"
+              style={{
+                animation: 'partnerships-marquee 40s linear infinite',
+                width: 'max-content',
+              }}
+            >
+              {[...partnershipLogos, ...partnershipLogos].map((logo, i) => (
+                <div
+                  key={`${logo.name}-${i}`}
+                  className="flex-shrink-0 flex items-center justify-center w-[180px] md:w-[220px] h-[80px] md:h-[100px] grayscale opacity-70 hover:grayscale-0 hover:opacity-100 transition-all duration-300"
+                >
+                  <img
+                    src={logo.src}
+                    alt={logo.name}
+                    className="max-w-full max-h-full object-contain"
+                    loading="lazy"
+                  />
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </Section>

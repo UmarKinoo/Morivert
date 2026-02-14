@@ -27,15 +27,41 @@ const _chromaticSpin = new THREE.Quaternion();
 const _yAxis = new THREE.Vector3(0, 1, 0); // pencil long axis is Y in local space
 const _euler = new THREE.Euler();
 
+// Scroll-driven gradient: dark background shifts through green → blue → gold warmth
+const BG_STOPS: { t: number; color: THREE.Color }[] = [
+  { t: 0.00, color: new THREE.Color('#050505') },   // hero — pure dark, pencil pops
+  { t: 0.10, color: new THREE.Color('#071f12') },   // emerald green tint (Bold Statement)
+  { t: 0.25, color: new THREE.Color('#061420') },   // deep blue (Awards)
+  { t: 0.40, color: new THREE.Color('#0a1e14') },   // teal green (Counters)
+  { t: 0.55, color: new THREE.Color('#141008') },   // warm gold / olive (Chromatic Life)
+  { t: 0.70, color: new THREE.Color('#081a22') },   // ocean blue (Product Grid)
+  { t: 0.82, color: new THREE.Color('#0c1a0e') },   // forest green (CTA)
+  { t: 0.95, color: new THREE.Color('#050505') },   // fade to dark for footer
+];
+const _bgColor = new THREE.Color();
+
+function lerpGradient(offset: number): THREE.Color {
+  if (offset <= BG_STOPS[0].t) return _bgColor.copy(BG_STOPS[0].color);
+  if (offset >= BG_STOPS[BG_STOPS.length - 1].t) return _bgColor.copy(BG_STOPS[BG_STOPS.length - 1].color);
+  for (let i = 0; i < BG_STOPS.length - 1; i++) {
+    const a = BG_STOPS[i], b = BG_STOPS[i + 1];
+    if (offset >= a.t && offset <= b.t) {
+      const local = (offset - a.t) / (b.t - a.t);
+      return _bgColor.copy(a.color).lerp(b.color, local);
+    }
+  }
+  return _bgColor.copy(BG_STOPS[0].color);
+}
+
 export const Experience: React.FC<ExperienceProps> = ({ texture, isMobile: isMobileProp }) => {
   const scroll = useScroll();
-  const { size } = useThree();
+  const { size, scene } = useThree();
   const pencilRef = useRef<THREE.Group>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera>(null);
 
   const isMobile = isMobileProp ?? size.width < MOBILE_BREAKPOINT;
   const pencilScale = isMobile ? 0.72 : 1;
-  const heroOffsetX = isMobile ? 0.35 : 0.9;
+  const heroOffsetX = isMobile ? 0.35 : 1.4;
 
   // Growth animation state
   const sproutState = useRef(0);
@@ -47,6 +73,9 @@ export const Experience: React.FC<ExperienceProps> = ({ texture, isMobile: isMob
   useFrame((_, delta) => {
     const offset = scroll.offset; // 0 to 1
 
+    // Animated gradient background
+    (scene.background as THREE.Color).copy(lerpGradient(offset));
+
     if (pencilRef.current) {
       pencilRef.current.scale.setScalar(pencilScale);
 
@@ -56,7 +85,7 @@ export const Experience: React.FC<ExperienceProps> = ({ texture, isMobile: isMob
       const s1 = THREE.MathUtils.smoothstep(offset, 0, 0.12);
       const introRotZ = THREE.MathUtils.lerp(-Math.PI * 0.2, 0, s1);   // ~36° diagonal, tip lower-right
       const introRotX = THREE.MathUtils.lerp(Math.PI * 0.08, 0, s1);   // slight forward lean
-      pencilRef.current.position.y = THREE.MathUtils.lerp(0.3, 0, s1);
+      pencilRef.current.position.y = THREE.MathUtils.lerp(0.15, 0, s1);
       pencilRef.current.position.x = THREE.MathUtils.lerp(heroOffsetX, 0, s1);
 
       // Hero spin: slow continuous rotation around the pencil's own tilted axis
