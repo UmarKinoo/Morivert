@@ -1,4 +1,4 @@
-import React, { Suspense, useState, useCallback, useEffect } from 'react';
+import React, { Suspense, useState, useCallback, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Canvas } from '@react-three/fiber';
 import { ScrollControls, Scroll, Environment } from '@react-three/drei';
@@ -43,13 +43,37 @@ function App() {
   const [view, setView] = useState<ViewType>('landing');
   const [scrollPages, setScrollPages] = useState(10);
 
-  const handleOverlayHeight = useCallback((heightPx: number) => {
-    if (heightPx <= 0) return;
-    const vh = typeof window !== 'undefined' ? window.innerHeight : 900;
-    // Exact ratio so scroll ends with footer at viewport bottom (no gap below)
-    const pages = Math.max(1, heightPx / vh) || 10;
+  // Use the same container ScrollControls uses (gl.domElement.parentNode). On real
+  // mobile, 100vh/layout height can be larger than window.innerHeight, so using
+  // innerHeight made pages too high and allowed scroll past the footer.
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const contentHeightRef = useRef(0);
+
+  const updateScrollPages = useCallback(() => {
+    const content = contentHeightRef.current;
+    if (content <= 0) return;
+    const containerHeight = scrollContainerRef.current?.clientHeight ?? (typeof window !== 'undefined' ? window.innerHeight : 900);
+    const pages = Math.max(1, content / containerHeight) || 10;
     setScrollPages(pages);
   }, []);
+
+  const handleOverlayHeight = useCallback((heightPx: number) => {
+    if (heightPx <= 0) return;
+    contentHeightRef.current = heightPx;
+    const containerHeight = scrollContainerRef.current?.clientHeight ?? (typeof window !== 'undefined' ? window.innerHeight : 900);
+    const pages = Math.max(1, heightPx / containerHeight) || 10;
+    setScrollPages(pages);
+  }, []);
+
+  useEffect(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => {
+      if (contentHeightRef.current > 0) updateScrollPages();
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [updateScrollPages]);
 
   return (
     <div
@@ -58,7 +82,7 @@ function App() {
     >
       <Header setView={setView} currentView={view} />
       {view === 'landing' && (
-        <div className="relative flex-1 min-h-0 flex flex-col">
+        <div ref={scrollContainerRef} className="relative flex-1 min-h-0 flex flex-col">
           <Canvas
           className="flex-1 min-h-0"
           shadows={!isMobile}
