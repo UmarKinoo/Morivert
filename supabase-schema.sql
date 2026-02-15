@@ -44,6 +44,13 @@ create policy "Users can submit their own quotes"
   to authenticated
   with check (auth.uid() = user_id);
 
+-- 3b. Policy: Guests (not logged in) can submit quotes (user_id stays null)
+create policy "Guests can submit quotes"
+  on public.quotes
+  for insert
+  to anon
+  with check (user_id is null);
+
 -- 4. Policy: Users can SELECT their own quotes
 create policy "Users can view their own quotes"
   on public.quotes

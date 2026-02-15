@@ -178,6 +178,11 @@ export const QuoteBuilderPage: React.FC = () => {
       setSubmitError(error.message);
     } else {
       setSubmitState('success');
+
+      // Send admin + customer emails via edge function (fire-and-forget, don't block UI)
+      supabase.functions.invoke('notify-new-quote', { body: payload }).catch(() => {
+        // Email failure is non-critical — quote is already saved
+      });
     }
   };
 
@@ -215,12 +220,17 @@ export const QuoteBuilderPage: React.FC = () => {
                 View my quotes
               </button>
             ) : (
-              <button
-                onClick={() => navigate('/login?returnTo=/dashboard')}
-                className="text-sm bg-emerald-500 text-black font-semibold px-6 py-3 rounded-xl hover:bg-emerald-400 transition-colors"
-              >
-                Sign in to view your quotes
-              </button>
+              <>
+                <p className="text-xs text-zinc-500 max-w-sm">
+                  To view your quote or download it as PDF, sign in or create an account.
+                </p>
+                <button
+                  onClick={() => navigate('/login?returnTo=/dashboard')}
+                  className="text-sm bg-emerald-500 text-black font-semibold px-6 py-3 rounded-xl hover:bg-emerald-400 transition-colors"
+                >
+                  Sign in or sign up
+                </button>
+              </>
             )}
             <button
               onClick={() => {
