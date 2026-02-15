@@ -1,5 +1,6 @@
 -- Allow guests (anon) to submit quotes without logging in (user_id stays null).
 -- Logged-in users still submit with user_id = auth.uid() via "Users can submit their own quotes".
+drop policy if exists "Guests can submit quotes" on public.quotes;
 create policy "Guests can submit quotes"
   on public.quotes
   for insert

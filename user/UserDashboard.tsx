@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { generateQuotePDF } from '../lib/generateQuotePDF';
@@ -47,6 +47,20 @@ export const UserDashboard: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setUserMenuOpen(false);
+      }
+    };
+    if (userMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [userMenuOpen]);
 
   const readPendingImpact = useCallback(() => {
     try {
@@ -237,22 +251,72 @@ export const UserDashboard: React.FC = () => {
             >
               New Quote
             </button>
-            <div className="flex items-center gap-2">
-              {userAvatar ? (
-                <img src={userAvatar} alt="" className="w-7 h-7 rounded-full" referrerPolicy="no-referrer" />
-              ) : (
-                <div className="w-7 h-7 rounded-full bg-zinc-800 flex items-center justify-center text-xs text-zinc-400">
-                  {userName.charAt(0).toUpperCase()}
+            <div ref={userMenuRef} className="relative">
+              <button
+                type="button"
+                onClick={() => setUserMenuOpen((o) => !o)}
+                className="flex items-center gap-2 rounded-lg border border-zinc-700/80 bg-zinc-900/80 px-3 py-2 hover:bg-zinc-800/80 transition-colors"
+                aria-expanded={userMenuOpen}
+                aria-haspopup="true"
+              >
+                {userAvatar ? (
+                  <img src={userAvatar} alt="" className="w-7 h-7 rounded-full" referrerPolicy="no-referrer" />
+                ) : (
+                  <div className="w-7 h-7 rounded-full bg-zinc-800 flex items-center justify-center text-xs text-zinc-400">
+                    {userName.charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <span className="hidden sm:inline text-xs text-zinc-400 max-w-[120px] truncate">{userName}</span>
+                <svg
+                  className={`w-4 h-4 text-zinc-500 transition-transform ${userMenuOpen ? 'rotate-180' : ''}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              {userMenuOpen && (
+                <div className="absolute right-0 top-full mt-2 w-56 rounded-xl bg-zinc-900 border border-zinc-700/80 shadow-xl py-2 z-[200]">
+                  <div className="px-4 py-2.5 border-b border-zinc-700/80">
+                    <p className="text-xs font-medium text-white truncate">{userName}</p>
+                    <p className="text-[11px] text-zinc-500 truncate">{userEmail}</p>
+                  </div>
+                  <div className="py-1">
+                    <button
+                      type="button"
+                      onClick={() => { setUserMenuOpen(false); navigate('/dashboard'); }}
+                      className="w-full text-left px-4 py-2.5 text-[12px] text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors"
+                    >
+                      My Quotes
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setUserMenuOpen(false); navigate('/profile'); }}
+                      className="w-full text-left px-4 py-2.5 text-[12px] text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors"
+                    >
+                      Profile & account
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setUserMenuOpen(false); navigate('/quote'); }}
+                      className="w-full text-left px-4 py-2.5 text-[12px] text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors"
+                    >
+                      New Quote
+                    </button>
+                  </div>
+                  <div className="border-t border-zinc-700/80 py-1">
+                    <button
+                      type="button"
+                      onClick={() => { setUserMenuOpen(false); handleLogout(); }}
+                      className="w-full text-left px-4 py-2.5 text-[12px] text-zinc-400 hover:bg-zinc-800 hover:text-white transition-colors"
+                    >
+                      Sign out
+                    </button>
+                  </div>
                 </div>
               )}
-              <span className="hidden sm:inline text-xs text-zinc-400 max-w-[120px] truncate">{userName}</span>
             </div>
-            <button
-              onClick={handleLogout}
-              className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
-            >
-              Sign out
-            </button>
           </div>
         </div>
       </header>

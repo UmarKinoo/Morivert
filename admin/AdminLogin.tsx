@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import { getIsAdmin } from '../lib/auth/roles';
 
 export const AdminLogin: React.FC = () => {
   const navigate = useNavigate();
@@ -8,11 +9,25 @@ export const AdminLogin: React.FC = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [checkingRole, setCheckingRole] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) navigate('/admin/dashboard', { replace: true });
+    let cancelled = false;
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (cancelled || !session) {
+        if (!session) setCheckingRole(false);
+        return;
+      }
+      const isAdmin = await getIsAdmin();
+      if (cancelled) return;
+      setCheckingRole(false);
+      if (isAdmin) {
+        navigate('/admin/dashboard', { replace: true });
+      } else {
+        navigate('/', { replace: true });
+      }
     });
+    return () => { cancelled = true; };
   }, [navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -25,10 +40,26 @@ export const AdminLogin: React.FC = () => {
     if (error) {
       setError(error.message);
       setLoading(false);
-    } else {
+      return;
+    }
+
+    const isAdmin = await getIsAdmin();
+    if (isAdmin) {
       navigate('/admin/dashboard', { replace: true });
+    } else {
+      await supabase.auth.signOut();
+      setError('This account does not have admin access.');
+      setLoading(false);
     }
   };
+
+  if (checkingRole) {
+    return (
+      <div className="min-h-screen bg-[#09090b] flex items-center justify-center">
+        <div className="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#09090b] flex items-center justify-center px-4">

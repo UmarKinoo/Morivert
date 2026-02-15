@@ -1,5 +1,5 @@
 import React, { Suspense, useState, useCallback, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Canvas } from '@react-three/fiber';
 import { ScrollControls, Scroll, Environment } from '@react-three/drei';
 import { Experience } from './components/Experience';
@@ -36,7 +36,9 @@ const SpotLight = 'spotLight' as any;
 
 function App() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const isMobile = useIsMobile();
+  const unauthorizedAdmin = searchParams.get('unauthorized') === 'admin';
   const [texture, setTexture] = useState<TextureType>(
     () => RANDOM_START_TEXTURES[Math.floor(Math.random() * RANDOM_START_TEXTURES.length)]
   );
@@ -75,11 +77,29 @@ function App() {
     return () => ro.disconnect();
   }, [updateScrollPages]);
 
+  const clearUnauthorized = useCallback(() => {
+    searchParams.delete('unauthorized');
+    setSearchParams(searchParams, { replace: true });
+  }, [searchParams, setSearchParams]);
+
   return (
     <div
       className={`w-full min-h-screen bg-neutral-950 flex flex-col ${view === 'landing' ? 'h-screen overflow-hidden' : 'overflow-y-auto'}`}
       style={view === 'landing' ? { touchAction: 'pan-y', WebkitOverflowScrolling: 'touch' } : undefined}
     >
+      {unauthorizedAdmin && (
+        <div className="fixed top-0 left-0 right-0 z-[110] flex items-center justify-center gap-3 bg-amber-500/95 text-black px-4 py-2.5 text-sm font-medium shadow-lg">
+          <span>You don’t have access to the admin area.</span>
+          <button
+            type="button"
+            onClick={clearUnauthorized}
+            className="underline hover:no-underline"
+            aria-label="Dismiss"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
       <Header setView={setView} currentView={view} />
       {/* Keep Canvas mounted but hidden to avoid ScrollControls style-on-null crash during unmount */}
       <div
