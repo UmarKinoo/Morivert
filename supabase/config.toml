@@ -202,7 +202,8 @@ enable_signup = true
 # addresses. If disabled, only the new email is required to confirm.
 double_confirm_changes = true
 # If enabled, users need to confirm their email address before signing in.
-enable_confirmations = false
+# Set to true for production; ensure Auth > URL Configuration and email templates are set in Dashboard.
+enable_confirmations = true
 # If enabled, users will need to reauthenticate or have logged in recently to change their password.
 secure_password_change = false
 # Controls the minimum amount of time that must pass before sending another signup confirmation or password reset email.
@@ -222,10 +223,27 @@ otp_expiry = 3600
 # admin_email = "admin@email.com"
 # sender_name = "Admin"
 
-# Uncomment to customize email template
-# [auth.email.template.invite]
-# subject = "You have been invited"
-# content_path = "./supabase/templates/invite.html"
+# Custom email templates (repo: supabase/templates/*.html)
+# Local dev: these files are used. Hosted: copy same HTML into Dashboard → Auth → Email Templates, or use Send Email Hook.
+[auth.email.template.confirmation]
+subject = "Confirm your Morivert signup"
+content_path = "./templates/confirmation.html"
+
+[auth.email.template.recovery]
+subject = "Reset your Morivert password"
+content_path = "./templates/recovery.html"
+
+[auth.email.template.magic_link]
+subject = "Your Morivert sign-in link"
+content_path = "./templates/magic_link.html"
+
+[auth.email.template.invite]
+subject = "You're invited to Morivert"
+content_path = "./templates/invite.html"
+
+[auth.email.template.email_change]
+subject = "Confirm your new email for Morivert"
+content_path = "./templates/email_change.html"
 
 # Uncomment to customize notification email template
 # [auth.email.notification.password_changed]
@@ -364,6 +382,14 @@ deno_version = 2
 # Edge Function: allow invoke with publishable key (2026 API keys)
 # See https://supabase.com/docs/guides/api/api-keys — Edge Functions need --no-verify-jwt when using sb_publishable_ keys
 [functions.notify-new-quote]
+verify_jwt = false
+
+[functions.invite-user]
+verify_jwt = true
+
+# Send Email Hook: all auth emails (confirm, magic link, reset, invite, change email) sent from code via Resend.
+# Configure in Dashboard → Authentication → Hooks → Send Email Hook. Deploy: supabase functions deploy send-auth-email --no-verify-jwt
+[functions.send-auth-email]
 verify_jwt = false
 
 # [edge_runtime.secrets]

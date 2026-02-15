@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 
-type AuthMode = 'signin' | 'signup';
+type AuthMode = 'signin' | 'signup' | 'magic' | 'forgot';
 
 export const UserLogin: React.FC = () => {
   const navigate = useNavigate();
@@ -15,6 +15,7 @@ export const UserLogin: React.FC = () => {
   const [message, setMessage] = useState('');
 
   const returnTo = searchParams.get('returnTo') || '/dashboard';
+  const isPasswordless = mode === 'magic' || mode === 'forgot';
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -22,30 +23,70 @@ export const UserLogin: React.FC = () => {
     });
   }, [navigate, returnTo]);
 
-  const handleGoogleLogin = async () => {
+  const clearFeedback = () => {
     setError('');
     setMessage('');
-    setLoading(true);
+  };
 
+  const handleGoogleLogin = async () => {
+    clearFeedback();
+    setLoading(true);
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
+      options: { redirectTo: `${window.location.origin}${returnTo}` },
+    });
+    if (error) setError(error.message);
+    setLoading(false);
+  };
+
+  const handleMagicLink = async (e: React.FormEvent) => {
+    e.preventDefault();
+    clearFeedback();
+    if (!email.trim()) {
+      setError('Please enter your email.');
+      return;
+    }
+    setLoading(true);
+    const { error } = await supabase.auth.signInWithOtp({
+      email: email.trim(),
       options: {
-        redirectTo: `${window.location.origin}${returnTo}`,
+        emailRedirectTo: `${window.location.origin}${returnTo}`,
       },
     });
-
     if (error) {
       setError(error.message);
       setLoading(false);
+      return;
     }
+    setMessage('Check your email for the sign-in link. It may take a minute.');
+    setLoading(false);
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    clearFeedback();
+    if (!email.trim()) {
+      setError('Please enter your email.');
+      return;
+    }
+    setLoading(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    if (error) {
+      setError(error.message);
+      setLoading(false);
+      return;
+    }
+    setMessage('Check your email for the password reset link.');
+    setLoading(false);
   };
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-    setMessage('');
-    if (!email.trim() || !password) {
-      setError('Please enter email and password.');
+    clearFeedback();
+    if (!email.trim() || (!isPasswordless && !password)) {
+      setError(isPasswordless ? 'Please enter your email.' : 'Please enter email and password.');
       return;
     }
     setLoading(true);
@@ -82,17 +123,29 @@ export const UserLogin: React.FC = () => {
     setLoading(false);
   };
 
+  const handleSubmit = (e: React.FormEvent) => {
+    if (mode === 'magic') return handleMagicLink(e);
+    if (mode === 'forgot') return handleResetPassword(e);
+    return handleEmailSubmit(e);
+  };
+
+  const subtitle =
+    mode === 'signin'
+      ? 'Sign in to get quotes & track orders'
+      : mode === 'signup'
+        ? 'Create an account'
+        : mode === 'magic'
+          ? 'We’ll send you a one-time sign-in link'
+          : 'We’ll send you a link to reset your password';
+
   return (
     <div className="min-h-screen bg-[#09090b] flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           <div className="text-xl font-medium tracking-tight text-white mb-2">MORIVERT</div>
-          <p className="text-sm text-zinc-500">
-            {mode === 'signin' ? 'Sign in to get quotes &amp; track orders' : 'Create an account'}
-          </p>
+          <p className="text-sm text-zinc-500">{subtitle}</p>
         </div>
 
-        {/* Google */}
         <div className="space-y-4">
           <button
             type="button"
@@ -118,8 +171,7 @@ export const UserLogin: React.FC = () => {
             </div>
           </div>
 
-          {/* Email / Password */}
-          <form onSubmit={handleEmailSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label htmlFor="email" className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-2">
                 Email
@@ -134,23 +186,34 @@ export const UserLogin: React.FC = () => {
                 className="w-full px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-xl text-sm text-white placeholder-zinc-600 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
               />
             </div>
-            <div>
-              <label htmlFor="password" className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-2">
-                Password
-              </label>
-              <input
-                id="password"
-                type="password"
-                autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-xl text-sm text-white placeholder-zinc-600 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
-              />
-              {mode === 'signup' && (
-                <p className="mt-1.5 text-[11px] text-zinc-600">At least 6 characters</p>
-              )}
-            </div>
+            {!isPasswordless && (
+              <div>
+                <label htmlFor="password" className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-2">
+                  Password
+                </label>
+                <input
+                  id="password"
+                  type="password"
+                  autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-xl text-sm text-white placeholder-zinc-600 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
+                />
+                {mode === 'signup' && (
+                  <p className="mt-1.5 text-[11px] text-zinc-600">At least 6 characters</p>
+                )}
+                {mode === 'signin' && (
+                  <button
+                    type="button"
+                    onClick={() => { setMode('forgot'); clearFeedback(); }}
+                    className="mt-1.5 text-[11px] text-emerald-400 hover:text-emerald-300"
+                  >
+                    Forgot password?
+                  </button>
+                )}
+              </div>
+            )}
 
             {error && (
               <div className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
@@ -168,31 +231,50 @@ export const UserLogin: React.FC = () => {
               disabled={loading}
               className="w-full py-3 bg-emerald-500 text-black text-sm font-semibold rounded-xl hover:bg-emerald-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              {loading ? 'Please wait...' : mode === 'signin' ? 'Sign in' : 'Sign up'}
+              {loading
+                ? 'Please wait...'
+                : mode === 'signin'
+                  ? 'Sign in'
+                  : mode === 'signup'
+                    ? 'Sign up'
+                    : mode === 'magic'
+                      ? 'Send magic link'
+                      : 'Send reset link'}
             </button>
           </form>
 
           <p className="text-center text-xs text-zinc-500">
-            {mode === 'signin' ? (
+            {mode === 'signin' && (
               <>
                 Don&apos;t have an account?{' '}
-                <button
-                  type="button"
-                  onClick={() => { setMode('signup'); setError(''); setMessage(''); }}
-                  className="text-emerald-400 hover:text-emerald-300 font-medium"
-                >
+                <button type="button" onClick={() => { setMode('signup'); clearFeedback(); }} className="text-emerald-400 hover:text-emerald-300 font-medium">
                   Sign up
                 </button>
+                {' · '}
+                <button type="button" onClick={() => { setMode('magic'); clearFeedback(); }} className="text-emerald-400 hover:text-emerald-300 font-medium">
+                  Sign in with magic link
+                </button>
               </>
-            ) : (
+            )}
+            {mode === 'signup' && (
               <>
                 Already have an account?{' '}
-                <button
-                  type="button"
-                  onClick={() => { setMode('signin'); setError(''); setMessage(''); }}
-                  className="text-emerald-400 hover:text-emerald-300 font-medium"
-                >
+                <button type="button" onClick={() => { setMode('signin'); clearFeedback(); }} className="text-emerald-400 hover:text-emerald-300 font-medium">
                   Sign in
+                </button>
+              </>
+            )}
+            {mode === 'magic' && (
+              <>
+                <button type="button" onClick={() => { setMode('signin'); clearFeedback(); }} className="text-emerald-400 hover:text-emerald-300 font-medium">
+                  ← Back to password sign in
+                </button>
+              </>
+            )}
+            {mode === 'forgot' && (
+              <>
+                <button type="button" onClick={() => { setMode('signin'); clearFeedback(); }} className="text-emerald-400 hover:text-emerald-300 font-medium">
+                  ← Back to sign in
                 </button>
               </>
             )}

@@ -1,9 +1,13 @@
-
 import React, { useState, useMemo, Suspense } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Canvas } from '@react-three/fiber';
 import { Environment, Float, OrbitControls, ContactShadows, Text } from '@react-three/drei';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ImpactModels } from './ImpactModels';
+import { supabase } from '../lib/supabase';
+import { generateImpactReportPDF } from '../lib/generateImpactReportPDF';
+
+const PENDING_IMPACT_KEY = 'morivert_pending_impact_report';
 
 // Fix: Use capitalized constants to bypass missing JSX intrinsic types
 const Color = 'color' as any;
@@ -12,6 +16,7 @@ const AmbientLight = 'ambientLight' as any;
 const SpotLight = 'spotLight' as any;
 
 export const ImmersiveCalculatorPage: React.FC = () => {
+  const navigate = useNavigate();
   const [quantity, setQuantity] = useState(500);
   const [productType, setProductType] = useState<'pencil' | 'notepad' | 'pen'>('pencil');
   const [custom, setCustom] = useState(false);
@@ -111,6 +116,25 @@ export const ImmersiveCalculatorPage: React.FC = () => {
             <motion.button
               whileHover={{ scale: 1.02, backgroundColor: '#fff', color: '#000' }}
               whileTap={{ scale: 0.98 }}
+              onClick={async () => {
+                const { data: { user } } = await supabase.auth.getUser();
+                const payload = { quantity, productType, custom, impact };
+                if (!user) {
+                  sessionStorage.setItem(PENDING_IMPACT_KEY, JSON.stringify(payload));
+                  navigate('/login?returnTo=/dashboard');
+                  return;
+                }
+                generateImpactReportPDF({
+                  quantity,
+                  productType,
+                  custom,
+                  seeds: impact.seeds,
+                  paper: impact.paper,
+                  co2: impact.co2,
+                  trees: impact.trees,
+                  children: impact.children,
+                });
+              }}
               className="w-full py-5 border border-white/20 text-white text-[10px] uppercase tracking-[0.3em] font-bold rounded-2xl transition-all duration-500"
             >
               Generate Impact Report

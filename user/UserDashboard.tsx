@@ -2,7 +2,17 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { generateQuotePDF } from '../lib/generateQuotePDF';
+import { generateImpactReportPDF } from '../lib/generateImpactReportPDF';
 import type { QuoteSubmission, QuoteLineItem } from '../lib/types';
+
+const PENDING_IMPACT_KEY = 'morivert_pending_impact_report';
+
+interface PendingImpactPayload {
+  quantity: number;
+  productType: 'pencil' | 'notepad' | 'pen';
+  custom: boolean;
+  impact: { seeds: number; paper: number; co2: number; trees: number; children: number };
+}
 
 const STATUS_STYLES: Record<string, string> = {
   new: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
@@ -24,7 +34,33 @@ export const UserDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [userName, setUserName] = useState('');
   const [userAvatar, setUserAvatar] = useState('');
+  const [userEmail, setUserEmail] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [pendingImpact, setPendingImpact] = useState<PendingImpactPayload | null>(null);
+  const [accountOpen, setAccountOpen] = useState(false);
+  const [newEmail, setNewEmail] = useState('');
+  const [emailLoading, setEmailLoading] = useState(false);
+  const [emailMessage, setEmailMessage] = useState('');
+  const [emailError, setEmailError] = useState('');
+
+  const readPendingImpact = useCallback(() => {
+    try {
+      const raw = sessionStorage.getItem(PENDING_IMPACT_KEY);
+      if (!raw) {
+        setPendingImpact(null);
+        return;
+      }
+      const data = JSON.parse(raw) as PendingImpactPayload;
+      if (data?.quantity != null && data?.impact) setPendingImpact(data);
+      else setPendingImpact(null);
+    } catch {
+      setPendingImpact(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    readPendingImpact();
+  }, [readPendingImpact]);
 
   const fetchQuotes = useCallback(async () => {
     const { data, error } = await supabase
@@ -46,6 +82,7 @@ export const UserDashboard: React.FC = () => {
       if (user) {
         setUserName(user.user_metadata?.full_name || user.email || '');
         setUserAvatar(user.user_metadata?.avatar_url || '');
+        setUserEmail(user.email || '');
       }
     });
 
@@ -65,6 +102,42 @@ export const UserDashboard: React.FC = () => {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate('/');
+  };
+
+  const handleChangeEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setEmailError('');
+    setEmailMessage('');
+    if (!newEmail.trim()) {
+      setEmailError('Enter a new email address.');
+      return;
+    }
+    setEmailLoading(true);
+    const { error } = await supabase.auth.updateUser({ email: newEmail.trim() });
+    if (error) {
+      setEmailError(error.message);
+      setEmailLoading(false);
+      return;
+    }
+    setEmailMessage('Check your new email address to verify the change. You may need to sign in again.');
+    setNewEmail('');
+    setEmailLoading(false);
+  };
+
+  const handleDownloadImpactPDF = () => {
+    if (!pendingImpact) return;
+    generateImpactReportPDF({
+      quantity: pendingImpact.quantity,
+      productType: pendingImpact.productType,
+      custom: pendingImpact.custom,
+      seeds: pendingImpact.impact.seeds,
+      paper: pendingImpact.impact.paper,
+      co2: pendingImpact.impact.co2,
+      trees: pendingImpact.impact.trees,
+      children: pendingImpact.impact.children,
+    });
+    sessionStorage.removeItem(PENDING_IMPACT_KEY);
+    setPendingImpact(null);
   };
 
   const handleDownloadPDF = (quote: QuoteSubmission) => {
@@ -153,6 +226,79 @@ export const UserDashboard: React.FC = () => {
       </header>
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
+        {/* Pending Impact Report (after login redirect) */}
+        {pendingImpact && (
+          <div className="mb-8 p-6 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+            <h3 className="text-sm font-semibold text-emerald-400 mb-2">Your Impact Report is ready</h3>
+            <p className="text-sm text-zinc-400 mb-4">
+              Based on {pendingImpact.quantity.toLocaleString()} {pendingImpact.productType === 'pencil' ? 'pencils' : pendingImpact.productType === 'notepad' ? 'notepads' : 'pens'}
+              — {pendingImpact.impact.seeds.toLocaleString()} seeds, {pendingImpact.impact.paper.toLocaleString()}g paper saved, {pendingImpact.impact.co2.toLocaleString()}g CO&#8322; avoided.
+            </p>
+            <button
+              onClick={handleDownloadImpactPDF}
+              className="flex items-center gap-2 text-xs font-semibold text-black bg-emerald-500 px-4 py-2.5 rounded-lg hover:bg-emerald-400 transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Download Impact Report (PDF)
+            </button>
+          </div>
+        )}
+
+        {/* Account / Change email */}
+        <div className="mb-8 rounded-xl bg-zinc-900/50 border border-zinc-800/50 overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setAccountOpen((o) => !o)}
+            className="w-full px-5 py-4 flex items-center justify-between text-left hover:bg-zinc-800/30 transition-colors"
+          >
+            <span className="text-sm font-medium text-white">Account &amp; email</span>
+            <svg
+              className={`w-4 h-4 text-zinc-500 transition-transform ${accountOpen ? 'rotate-180' : ''}`}
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+          {accountOpen && (
+            <div className="px-5 pb-5 pt-1 border-t border-zinc-800/50">
+              <p className="text-xs text-zinc-500 mb-2">Current email</p>
+              <p className="text-sm text-white mb-4">{userEmail || '—'}</p>
+              <form onSubmit={handleChangeEmail} className="space-y-3">
+                <label htmlFor="new-email" className="block text-xs font-medium text-zinc-500 uppercase tracking-wider">
+                  New email address
+                </label>
+                <input
+                  id="new-email"
+                  type="email"
+                  autoComplete="email"
+                  value={newEmail}
+                  onChange={(e) => setNewEmail(e.target.value)}
+                  placeholder="new@example.com"
+                  className="w-full px-4 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-white placeholder-zinc-600 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                />
+                {emailError && (
+                  <p className="text-sm text-red-400">{emailError}</p>
+                )}
+                {emailMessage && (
+                  <p className="text-sm text-emerald-400">{emailMessage}</p>
+                )}
+                <button
+                  type="submit"
+                  disabled={emailLoading}
+                  className="text-xs font-semibold text-emerald-400 hover:text-emerald-300 disabled:opacity-50"
+                >
+                  {emailLoading ? 'Sending...' : 'Change email (verification sent to new address)'}
+                </button>
+              </form>
+            </div>
+          )}
+        </div>
+
         {/* Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
           <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-xl p-4">

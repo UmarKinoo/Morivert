@@ -15,6 +15,7 @@ import {
   Leaf,
   Package,
   X,
+  UserPlus,
 } from 'lucide-react';
 
 const STATUS_CONFIG: Record<QuoteStatus, { label: string; color: string; bg: string }> = {
@@ -32,6 +33,10 @@ export const AdminDashboard: React.FC = () => {
   const [search, setSearch] = useState('');
   const [selectedQuote, setSelectedQuote] = useState<QuoteSubmission | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteLoading, setInviteLoading] = useState(false);
+  const [inviteMessage, setInviteMessage] = useState('');
+  const [inviteError, setInviteError] = useState('');
 
   const fetchQuotes = async () => {
     setRefreshing(true);
@@ -77,6 +82,36 @@ export const AdminDashboard: React.FC = () => {
 
   const updateNotes = async (id: string, notes: string) => {
     await supabase.from('quotes').update({ admin_notes: notes }).eq('id', id);
+  };
+
+  const handleInviteUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setInviteError('');
+    setInviteMessage('');
+    if (!inviteEmail.trim()) {
+      setInviteError('Enter an email address.');
+      return;
+    }
+    setInviteLoading(true);
+    const { data, error } = await supabase.functions.invoke('invite-user', {
+      body: {
+        email: inviteEmail.trim(),
+        redirectTo: `${window.location.origin}/dashboard`,
+      },
+    });
+    if (error) {
+      setInviteError(error.message || 'Failed to send invite');
+      setInviteLoading(false);
+      return;
+    }
+    if (data?.error) {
+      setInviteError(data.error);
+      setInviteLoading(false);
+      return;
+    }
+    setInviteMessage(`Invite sent to ${inviteEmail.trim()}. They will receive an email to sign up.`);
+    setInviteEmail('');
+    setInviteLoading(false);
   };
 
   const filteredQuotes = useMemo(() => {
@@ -183,6 +218,48 @@ export const AdminDashboard: React.FC = () => {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+        {/* Invite user — first thing on the page */}
+        <section
+          aria-label="Invite user"
+          className="mb-8 p-6 rounded-2xl bg-emerald-500/10 border-2 border-emerald-500/30"
+        >
+          <div className="flex items-center gap-3 mb-3">
+            <div className="p-2 rounded-lg bg-emerald-500/20">
+              <UserPlus className="w-5 h-5 text-emerald-400" />
+            </div>
+            <div>
+              <h2 className="text-base font-semibold text-white">Invite user</h2>
+              <p className="text-xs text-zinc-400">
+                Send an invite to someone who doesn&apos;t have an account. They&apos;ll get an email to sign up.
+              </p>
+            </div>
+          </div>
+          <form onSubmit={handleInviteUser} className="flex flex-wrap items-end gap-3 mt-4">
+            <div className="flex-1 min-w-[200px]">
+              <label htmlFor="invite-email" className="block text-xs font-medium text-zinc-400 uppercase tracking-wider mb-1.5">
+                Email address
+              </label>
+              <input
+                id="invite-email"
+                type="email"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                placeholder="colleague@example.com"
+                className="w-full px-4 py-2.5 bg-zinc-900 border border-zinc-700 rounded-lg text-sm text-white placeholder-zinc-600 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={inviteLoading}
+              className="px-5 py-2.5 bg-emerald-500 text-black text-sm font-semibold rounded-lg hover:bg-emerald-400 disabled:opacity-50 transition-colors"
+            >
+              {inviteLoading ? 'Sending...' : 'Send invite'}
+            </button>
+          </form>
+          {inviteError && <p className="mt-3 text-sm text-red-400">{inviteError}</p>}
+          {inviteMessage && <p className="mt-3 text-sm text-emerald-400">{inviteMessage}</p>}
+        </section>
+
         {/* Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <StatCard icon={<FileText className="w-5 h-5" />} label="Total Quotes" value={stats.total} />
