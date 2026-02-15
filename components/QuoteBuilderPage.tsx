@@ -180,8 +180,14 @@ export const QuoteBuilderPage: React.FC = () => {
       setSubmitState('success');
 
       // Send admin + customer emails via edge function (fire-and-forget, don't block UI)
-      supabase.functions.invoke('notify-new-quote', { body: payload }).catch(() => {
-        // Email failure is non-critical — quote is already saved
+      const fnUrl = `${import.meta.env.VITE_SUPABASE_URL?.replace(/\/$/, '')}/functions/v1/notify-new-quote`;
+      console.log('[Morivert] Calling quote email:', fnUrl);
+      supabase.functions.invoke('notify-new-quote', { body: payload }).then(({ data, error }) => {
+        if (error) console.error('[Morivert] Quote email failed:', error);
+        else if (data?.error) console.error('[Morivert] Quote email error:', data);
+        else console.log('[Morivert] Quote email sent:', data);
+      }).catch((err) => {
+        console.error('[Morivert] Quote email request failed:', err);
       });
     }
   };

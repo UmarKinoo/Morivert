@@ -361,6 +361,11 @@ inspector_port = 8083
 # The Deno major version to use.
 deno_version = 2
 
+# Edge Function: allow invoke with publishable key (2026 API keys)
+# See https://supabase.com/docs/guides/api/api-keys — Edge Functions need --no-verify-jwt when using sb_publishable_ keys
+[functions.notify-new-quote]
+verify_jwt = false
+
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 
