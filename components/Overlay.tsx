@@ -210,55 +210,56 @@ export const Overlay: React.FC<OverlayProps> = ({ currentTexture, onTextureChang
         </motion.div>
       </Section>
 
-      {/* 3. Awards & Credibility — WHITE (tighter bottom so Partnerships feels connected) */}
-      <Section light className="!pb-12 md:!pb-16">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-          <div className="lg:col-span-4 space-y-4">
-            <h3 className="text-xs uppercase tracking-[0.4em] text-emerald-600 font-semibold">Credibility</h3>
-            <h2 className="text-4xl font-light tracking-tight text-neutral-900">Awards & <br/><span className="italic font-serif">Recognition.</span></h2>
-            <p className="text-sm text-neutral-500 font-light">Validated by global leaders in sustainability and innovation.</p>
-          </div>
-          <div className="lg:col-span-8 grid grid-cols-1 md:grid-cols-2 gap-4">
-            {awards.map((a, i) => (
-              <motion.div
-                key={i}
-                whileHover={{ y: -5, borderColor: 'rgba(0,0,0,0.15)' }}
-                className="p-8 bg-white border border-neutral-200 rounded-3xl transition-all cursor-default group shadow-sm"
-              >
-                <div className="text-lg font-medium mb-2 text-neutral-900 group-hover:text-emerald-600 transition-colors">{a.title}</div>
-                <div className="text-[11px] text-neutral-500 uppercase tracking-widest leading-relaxed">{a.desc}</div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </Section>
-
-      {/* 3b. Partnerships — logo slider (tighter top to pair with Awards) */}
-      <Section light className="!pt-10 md:!pt-12 !pb-12 md:!pb-16">
-        <div className="w-full">
-          <h3 className="text-xs uppercase tracking-[0.4em] text-emerald-600 font-semibold mb-2">Trusted by</h3>
-          <h2 className="text-3xl md:text-4xl font-light tracking-tight text-neutral-900 mb-10 md:mb-12">Partnerships.</h2>
-          <div className="overflow-hidden w-full -mx-10 md:-mx-24">
-            <div
-              className="flex w-max gap-10 md:gap-16 items-center"
-              style={{
-                animation: 'partnerships-marquee 40s linear infinite',
-                width: 'max-content',
-              }}
-            >
-              {[...partnershipLogos, ...partnershipLogos].map((logo, i) => (
-                <div
-                  key={`${logo.name}-${i}`}
-                  className="flex-shrink-0 flex items-center justify-center w-[180px] md:w-[220px] h-[80px] md:h-[100px] grayscale opacity-70 hover:grayscale-0 hover:opacity-100 transition-all duration-300"
+      {/* 3. Awards & Partnerships — single white section */}
+      <Section light className="!min-h-0 !py-16 md:!py-20">
+        <div className="space-y-16 md:space-y-20">
+          {/* Awards & Credibility */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+            <div className="lg:col-span-4 space-y-4">
+              <h3 className="text-xs uppercase tracking-[0.4em] text-emerald-600 font-semibold">Credibility</h3>
+              <h2 className="text-4xl font-light tracking-tight text-neutral-900">Awards & <br/><span className="italic font-serif">Recognition.</span></h2>
+              <p className="text-sm text-neutral-500 font-light">Validated by global leaders in sustainability and innovation.</p>
+            </div>
+            <div className="lg:col-span-8 grid grid-cols-1 md:grid-cols-2 gap-4">
+              {awards.map((a, i) => (
+                <motion.div
+                  key={i}
+                  whileHover={{ y: -5, borderColor: 'rgba(0,0,0,0.15)' }}
+                  className="p-8 bg-white border border-neutral-200 rounded-3xl transition-all cursor-default group shadow-sm"
                 >
-                  <img
-                    src={logo.src}
-                    alt={logo.name}
-                    className="max-w-full max-h-full object-contain"
-                    loading="lazy"
-                  />
-                </div>
+                  <div className="text-lg font-medium mb-2 text-neutral-900 group-hover:text-emerald-600 transition-colors">{a.title}</div>
+                  <div className="text-[11px] text-neutral-500 uppercase tracking-widest leading-relaxed">{a.desc}</div>
+                </motion.div>
               ))}
+            </div>
+          </div>
+
+          {/* Partnerships — logo slider */}
+          <div className="w-full">
+            <h3 className="text-xs uppercase tracking-[0.4em] text-emerald-600 font-semibold mb-2">Trusted by</h3>
+            <h2 className="text-3xl md:text-4xl font-light tracking-tight text-neutral-900 mb-10 md:mb-12">Partnerships.</h2>
+            <div className="overflow-hidden w-full -mx-10 md:-mx-24">
+              <div
+                className="flex w-max gap-10 md:gap-16 items-center"
+                style={{
+                  animation: 'partnerships-marquee 40s linear infinite',
+                  width: 'max-content',
+                }}
+              >
+                {[...partnershipLogos, ...partnershipLogos].map((logo, i) => (
+                  <div
+                    key={`${logo.name}-${i}`}
+                    className="flex-shrink-0 flex items-center justify-center w-[180px] md:w-[220px] h-[80px] md:h-[100px] grayscale opacity-70 hover:grayscale-0 hover:opacity-100 transition-all duration-300"
+                  >
+                    <img
+                      src={logo.src}
+                      alt={logo.name}
+                      className="max-w-full max-h-full object-contain"
+                      loading="lazy"
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -376,7 +377,7 @@ export const Overlay: React.FC<OverlayProps> = ({ currentTexture, onTextureChang
           transition={{ duration: 1 }}
           className="w-full"
         >
-          <ImpactCalculator isVisible={true} />
+          <ImpactCalculator isVisible={true} onNavigate={onNavigate} />
         </motion.div>
       </Section>
 

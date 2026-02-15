@@ -81,9 +81,13 @@ function App() {
       style={view === 'landing' ? { touchAction: 'pan-y', WebkitOverflowScrolling: 'touch' } : undefined}
     >
       <Header setView={setView} currentView={view} />
-      {view === 'landing' && (
-        <div ref={scrollContainerRef} className="relative flex-1 min-h-0 flex flex-col">
-          <Canvas
+      {/* Keep Canvas mounted but hidden to avoid ScrollControls style-on-null crash during unmount */}
+      <div
+        ref={scrollContainerRef}
+        className="relative flex-1 min-h-0 flex flex-col"
+        style={view !== 'landing' ? { display: 'none' } : undefined}
+      >
+        <Canvas
           className="flex-1 min-h-0"
           shadows={!isMobile}
           camera={{ position: [0, 0, 5], fov: 35 }}
@@ -95,6 +99,7 @@ function App() {
           }}
           dpr={isMobile ? 1 : [1, 2]}
           style={{ touchAction: 'none', position: 'relative', zIndex: 0 }}
+          frameloop={view === 'landing' ? 'always' : 'never'}
         >
           <Color attach="background" args={['#050505']} />
           <Suspense fallback={null}>
@@ -127,8 +132,7 @@ function App() {
           </Suspense>
         </Canvas>
         {isMobile && <GrainOverlay />}
-        </div>
-      )}
+      </div>
 
       {view === 'calculator' && <ImmersiveCalculatorPage />}
 

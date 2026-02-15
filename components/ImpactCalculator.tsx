@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../lib/supabase';
 import { generateImpactReportPDF } from '../lib/generateImpactReportPDF';
@@ -8,6 +7,7 @@ const PENDING_IMPACT_KEY = 'morivert_pending_impact_report';
 
 interface ImpactCalculatorProps {
   isVisible: boolean;
+  onNavigate?: (path: string) => void;
 }
 
 const AnimatedNumber = ({ value, label, unit = "" }: { value: number; label: string; unit?: string }) => {
@@ -47,8 +47,7 @@ const AnimatedNumber = ({ value, label, unit = "" }: { value: number; label: str
   );
 };
 
-export const ImpactCalculator: React.FC<ImpactCalculatorProps> = ({ isVisible }) => {
-  const navigate = useNavigate();
+export const ImpactCalculator: React.FC<ImpactCalculatorProps> = ({ isVisible, onNavigate }) => {
   const [quantity, setQuantity] = useState(100);
   const [productType, setProductType] = useState<'pencil' | 'notepad' | 'pen'>('pencil');
   const [custom, setCustom] = useState(false);
@@ -152,7 +151,7 @@ export const ImpactCalculator: React.FC<ImpactCalculatorProps> = ({ isVisible })
               const payload = { quantity, productType, custom, impact };
               if (!user) {
                 sessionStorage.setItem(PENDING_IMPACT_KEY, JSON.stringify(payload));
-                navigate('/login?returnTo=/dashboard');
+                onNavigate?.('/login?returnTo=/dashboard');
                 return;
               }
               generateImpactReportPDF({
