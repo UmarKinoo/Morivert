@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 
 const STATUS_CONFIG: Record<QuoteStatus, { label: string; color: string; bg: string }> = {
+  draft: { label: 'Draft', color: 'text-zinc-400', bg: 'bg-zinc-500/10 border-zinc-500/20' },
   new: { label: 'New', color: 'text-blue-400', bg: 'bg-blue-500/10 border-blue-500/20' },
   in_progress: { label: 'In Progress', color: 'text-amber-400', bg: 'bg-amber-500/10 border-amber-500/20' },
   completed: { label: 'Completed', color: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20' },
@@ -125,11 +126,19 @@ export const AdminDashboard: React.FC = () => {
         (q) =>
           q.contact_name?.toLowerCase().includes(s) ||
           q.company_name?.toLowerCase().includes(s) ||
-          q.email?.toLowerCase().includes(s)
+          q.email?.toLowerCase().includes(s) ||
+          (q as any).category?.toLowerCase().includes(s) ||
+          ((q as any).tags as string[])?.some((t: string) => t.toLowerCase().includes(s))
       );
     }
     return result;
   }, [quotes, filter, search]);
+
+  const handleDeleteQuote = async (id: string) => {
+    await supabase.from('quotes').delete().eq('id', id);
+    setSelectedQuote((prev) => (prev?.id === id ? null : prev));
+    fetchQuotes();
+  };
 
   const stats = useMemo(() => {
     const now = new Date();
@@ -297,6 +306,7 @@ export const AdminDashboard: React.FC = () => {
                 className="appearance-none bg-zinc-900 border border-zinc-800 rounded-xl text-sm text-zinc-300 pl-4 pr-10 py-2.5 outline-none focus:border-zinc-600 cursor-pointer"
               >
                 <option value="all">All statuses</option>
+                <option value="draft">Draft</option>
                 <option value="new">New</option>
                 <option value="in_progress">In Progress</option>
                 <option value="completed">Completed</option>
@@ -380,6 +390,7 @@ export const AdminDashboard: React.FC = () => {
           onClose={() => setSelectedQuote(null)}
           onStatusChange={(status) => updateStatus(selectedQuote.id!, status)}
           onNotesChange={(notes) => updateNotes(selectedQuote.id!, notes)}
+          onDelete={() => handleDeleteQuote(selectedQuote.id!)}
         />
       )}
     </div>
@@ -421,8 +432,10 @@ const QuoteDrawer: React.FC<{
   onClose: () => void;
   onStatusChange: (status: QuoteStatus) => void;
   onNotesChange: (notes: string) => void;
-}> = ({ quote, onClose, onStatusChange, onNotesChange }) => {
+  onDelete: () => void;
+}> = ({ quote, onClose, onStatusChange, onNotesChange, onDelete }) => {
   const [notes, setNotes] = useState(quote.admin_notes || '');
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
 
   return (
     <>
@@ -453,6 +466,17 @@ const QuoteDrawer: React.FC<{
             <InfoRow label="Email" value={quote.email} />
             <InfoRow label="Phone" value={quote.phone} />
             <InfoRow label="Market" value={quote.market} />
+            {(quote as any).category && (
+              <InfoRow label="Category" value={(quote as any).category} />
+            )}
+            {(quote as any).tags?.length > 0 && (
+              <div className="flex justify-between text-sm py-1.5">
+                <span className="text-zinc-500">Tags</span>
+                <span className="text-zinc-200">
+                  {(quote as any).tags.join(', ')}
+                </span>
+              </div>
+            )}
           </Section>
 
           {/* Line Items */}
@@ -519,6 +543,36 @@ const QuoteDrawer: React.FC<{
               placeholder="Add internal notes..."
               className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-600 outline-none focus:border-zinc-600 resize-none"
             />
+          </Section>
+
+          {/* Delete */}
+          <Section title="Danger">
+            {deleteConfirm ? (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    onDelete();
+                    onClose();
+                  }}
+                  className="px-4 py-2 rounded-lg text-sm font-medium text-red-400 border border-red-500/30 hover:bg-red-500/10"
+                >
+                  Confirm delete
+                </button>
+                <button
+                  onClick={() => setDeleteConfirm(false)}
+                  className="px-4 py-2 rounded-lg text-sm text-zinc-500 hover:text-zinc-300"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setDeleteConfirm(true)}
+                className="px-4 py-2 rounded-lg text-sm font-medium text-zinc-500 hover:text-red-400 border border-zinc-700 hover:border-red-500/30 transition-colors"
+              >
+                Delete quote
+              </button>
+            )}
           </Section>
         </div>
       </div>

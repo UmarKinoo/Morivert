@@ -1,35 +1,45 @@
-# Supabase migrations
+# Supabase (production only)
 
-Migrations live in `supabase/migrations/`. The CLI tracks which have been applied on your linked project.
+We **do not run Supabase locally** — everything uses the **hosted/production** project.
 
-## First-time: log in and push
+## Applying migrations
 
-1. **Log in to Supabase CLI** (once; opens browser):
+Migrations live in `supabase/migrations/`. Apply them to production in one of these ways:
 
-   ```bash
-   supabase login
-   ```
+### Option A: Run SQL in Dashboard (recommended)
 
-2. **Link and push** (uses `VITE_SUPABASE_URL` from `.env`):
+1. Open **[Supabase Dashboard](https://supabase.com/dashboard)** → your project → **SQL Editor**.
+2. Open the migration file you need (e.g. `supabase/migrations/20260215000000_quotes_draft_category_tags_crud.sql`).
+3. Copy its contents, paste into the SQL Editor, and click **Run**.
 
-   ```bash
-   npm run db:push
-   ```
+### Option B: CLI + remote link
 
-   Or run the script directly: `./scripts/supabase-push.sh`
+1. **Log in** (once):  
+   `supabase login`
 
-   The script reads the project ref from `.env` and runs `supabase link` then `supabase db push`.
+2. **Link and push** (uses `VITE_SUPABASE_URL` from `.env`):  
+   `npm run db:push`  
+   This runs `scripts/supabase-push.sh`, which links the remote project and runs `supabase db push`.
 
-## Create a new migration after schema changes
+## Creating a new migration
+
+1. Add a new file under `supabase/migrations/` (e.g. `YYYYMMDDHHMMSS_description.sql`).
+2. Apply it using **Option A** or **Option B** above.
+
+## Edge Functions
+
+Deploy to production:
 
 ```bash
-supabase migration new describe_your_change
-# Edit the new file in supabase/migrations/
-supabase db push
+supabase functions deploy <function-name> [--no-verify-jwt]
 ```
 
-## Other useful commands
+Secrets are set in the Dashboard or via:
 
-- `supabase db diff` — generate a migration from local vs remote schema
-- `supabase db pull` — pull remote schema into a migration
-- `supabase status` — show local Supabase status (when running `supabase start`)
+```bash
+supabase secrets set KEY=value
+```
+
+## Local Supabase (optional)
+
+We don’t use `supabase start` by default. If you want a local instance later, run `supabase start`; the same migration files can be applied with `supabase db reset` or `supabase db push` after linking.

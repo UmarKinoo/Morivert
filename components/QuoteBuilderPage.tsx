@@ -1,10 +1,12 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import type { QuoteLineItem } from '../lib/types';
+import type { QuoteLineItem, QuoteSubmission } from '../lib/types';
 import type { User } from '@supabase/supabase-js';
 import type { ViewType } from '../App';
 import { Header } from './Header';
+
+const QUOTE_CATEGORIES = ['Corporate', 'Event', 'Retail', 'Personal', 'Other'] as const;
 
 type ProductType =
   | 'Plain Recycled Paper Pencil'
@@ -77,12 +79,18 @@ type SubmitState = 'idle' | 'submitting' | 'success' | 'error';
 
 export const QuoteBuilderPage: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const editId = searchParams.get('id') || null;
+
   const [user, setUser] = useState<User | null>(null);
+  const [loadingEdit, setLoadingEdit] = useState(!!editId);
 
   const [quantities, setQuantities] = useState<Record<ProductType, number>>(() =>
     ALL_PRODUCTS.reduce((acc, p) => ({ ...acc, [p]: 0 }), {} as Record<ProductType, number>)
   );
   const [market, setMarket] = useState<'Mauritius' | 'Export'>('Mauritius');
+  const [category, setCategory] = useState<string>('');
+  const [tagsStr, setTagsStr] = useState('');
 
   /* Contact form fields — auto-filled from session */
   const [contactName, setContactName] = useState('');
@@ -99,11 +107,48 @@ export const QuoteBuilderPage: React.FC = () => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user) {
         setUser(user);
-        setContactName(user.user_metadata?.full_name || '');
-        setEmail(user.email || '');
+        if (!editId) {
+          setContactName(user.user_metadata?.full_name || '');
+          setEmail(user.email || '');
+        }
       }
     });
-  }, []);
+  }, [editId]);
+
+  /* Load quote for edit (draft or new, own quote only) */
+  useEffect(() => {
+    if (!editId || !user) {
+      setLoadingEdit(false);
+      return;
+    }
+    supabase
+      .from('quotes')
+      .select('*')
+      .eq('id', editId)
+      .eq('user_id', user.id)
+      .in('status', ['draft', 'new'])
+      .maybeSingle()
+      .then(({ data, error }) => {
+        setLoadingEdit(false);
+        if (error || !data) return;
+        const q = data as QuoteSubmission & { line_items: QuoteLineItem[] };
+        const items = Array.isArray(q.line_items) ? q.line_items : [];
+        const nextQty = { ...ALL_PRODUCTS.reduce((acc, p) => ({ ...acc, [p]: 0 }), {} as Record<ProductType, number>) };
+        items.forEach((li) => {
+          const product = (li.product || li.label) as ProductType;
+          if (ALL_PRODUCTS.includes(product)) nextQty[product] = li.qty || 0;
+        });
+        setQuantities(nextQty);
+        setMarket(q.market || 'Mauritius');
+        setContactName(q.contact_name || '');
+        setCompanyName(q.company_name || '');
+        setEmail(q.email || '');
+        setPhone(q.phone || '');
+        setMessage(q.message || '');
+        setCategory(q.category || '');
+        setTagsStr(Array.isArray(q.tags) ? q.tags.join(', ') : '');
+      });
+  }, [editId, user?.id]);
 
   const setQty = useCallback((product: ProductType, qty: number) => {
     setQuantities((prev) => ({ ...prev, [product]: Math.max(0, Math.min(10000, qty)) }));
@@ -141,20 +186,17 @@ export const QuoteBuilderPage: React.FC = () => {
 
   const hasSelection = lineItems.length > 0;
 
-  const handleSubmit = async () => {
-    if (!hasSelection || !contactName.trim() || !email.trim()) return;
-
-    setSubmitState('submitting');
-    setSubmitError('');
-
-    const payload = {
-      user_id: user?.id,
+  const buildPayload = useCallback(
+    (status: 'draft' | 'new') => ({
+      user_id: user?.id ?? undefined,
       contact_name: contactName.trim(),
       company_name: companyName.trim(),
       email: email.trim(),
       phone: phone.trim(),
       message: message.trim(),
       market,
+      category: category.trim() || undefined,
+      tags: tagsStr.trim() ? tagsStr.split(/,\s*/).map((t) => t.trim()).filter(Boolean) : undefined,
       line_items: lineItems.map((li): QuoteLineItem => ({
         product: li.product,
         label: li.label,
@@ -168,8 +210,37 @@ export const QuoteBuilderPage: React.FC = () => {
       seeds: quote.seeds,
       paper_grams: quote.paperGrams,
       co2_saved: quote.co2Saved,
-      status: 'new' as const,
-    };
+      status,
+    }),
+    [user?.id, contactName, companyName, email, phone, message, market, category, tagsStr, lineItems, quote]
+  );
+
+  const handleSubmit = async () => {
+    if (!hasSelection || !contactName.trim() || !email.trim()) return;
+
+    setSubmitState('submitting');
+    setSubmitError('');
+
+    const payload = buildPayload('new');
+
+    if (editId && user?.id) {
+      const { error } = await supabase
+        .from('quotes')
+        .update({ ...payload, status: 'new' })
+        .eq('id', editId)
+        .eq('user_id', user.id);
+
+      if (error) {
+        setSubmitState('error');
+        setSubmitError(error.message);
+        return;
+      }
+      setSubmitState('success');
+      supabase.functions.invoke('notify-new-quote', { body: { ...payload, id: editId } }).catch((err) =>
+        console.error('[Morivert] Quote email failed:', err)
+      );
+      return;
+    }
 
     const { error } = await supabase.from('quotes').insert(payload);
 
@@ -178,24 +249,61 @@ export const QuoteBuilderPage: React.FC = () => {
       setSubmitError(error.message);
     } else {
       setSubmitState('success');
-
-      // Send admin + customer emails via edge function (fire-and-forget, don't block UI)
-      const fnUrl = `${import.meta.env.VITE_SUPABASE_URL?.replace(/\/$/, '')}/functions/v1/notify-new-quote`;
-      console.log('[Morivert] Calling quote email:', fnUrl);
-      supabase.functions.invoke('notify-new-quote', { body: payload }).then(({ data, error }) => {
-        if (error) console.error('[Morivert] Quote email failed:', error);
-        else if (data?.error) console.error('[Morivert] Quote email error:', data);
-        else console.log('[Morivert] Quote email sent:', data);
-      }).catch((err) => {
-        console.error('[Morivert] Quote email request failed:', err);
-      });
+      supabase.functions.invoke('notify-new-quote', { body: payload }).catch((err) =>
+        console.error('[Morivert] Quote email failed:', err)
+      );
     }
+  };
+
+  const handleSaveDraft = async () => {
+    if (!contactName.trim() || !email.trim()) {
+      setSubmitError('Name and email are required to save a draft.');
+      return;
+    }
+    setSubmitState('submitting');
+    setSubmitError('');
+    const payload = buildPayload('draft');
+    if (editId && user?.id) {
+      const { error } = await supabase
+        .from('quotes')
+        .update({ ...payload, status: 'draft' })
+        .eq('id', editId)
+        .eq('user_id', user.id);
+      if (error) {
+        setSubmitState('error');
+        setSubmitError(error.message);
+        return;
+      }
+      setSubmitState('idle');
+      navigate('/dashboard');
+      return;
+    }
+    const { error } = await supabase.from('quotes').insert(payload);
+    if (error) {
+      setSubmitState('error');
+      setSubmitError(error.message);
+      return;
+    }
+    setSubmitState('idle');
+    navigate('/dashboard');
   };
 
   const headerProps = {
     currentView: 'quote' as ViewType,
     setView: (v: ViewType) => (v === 'quote' ? navigate('/quote') : navigate('/')),
   };
+
+  if (loadingEdit) {
+    return (
+      <div className="w-full min-h-screen bg-[#050505] text-zinc-100 font-sans">
+        <Header {...headerProps} />
+        <div className="flex items-center justify-center px-4 pt-32">
+          <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+          <span className="ml-3 text-sm text-zinc-500">Loading quote…</span>
+        </div>
+      </div>
+    );
+  }
 
   if (submitState === 'success') {
     return (
@@ -369,6 +477,29 @@ export const QuoteBuilderPage: React.FC = () => {
                 />
               </div>
               <div className="sm:col-span-2">
+                <label className="block text-xs text-zinc-500 mb-1.5">Category (optional)</label>
+                <select
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-xl text-sm text-white outline-none focus:border-emerald-500 transition-colors"
+                >
+                  <option value="">—</option>
+                  {QUOTE_CATEGORIES.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="sm:col-span-2">
+                <label className="block text-xs text-zinc-500 mb-1.5">Tags (optional, comma-separated)</label>
+                <input
+                  type="text"
+                  value={tagsStr}
+                  onChange={(e) => setTagsStr(e.target.value)}
+                  placeholder="e.g. wedding, branded, urgent"
+                  className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-xl text-sm text-white placeholder-zinc-600 outline-none focus:border-emerald-500 transition-colors"
+                />
+              </div>
+              <div className="sm:col-span-2">
                 <label className="block text-xs text-zinc-500 mb-1.5">Message (optional)</label>
                 <textarea
                   value={message} onChange={(e) => setMessage(e.target.value)} rows={3}
@@ -413,14 +544,26 @@ export const QuoteBuilderPage: React.FC = () => {
                 </div>
               )}
 
-              <button
-                type="button"
-                onClick={handleSubmit}
-                disabled={submitState === 'submitting' || !contactName.trim() || !email.trim()}
-                className="w-full py-4 rounded-xl bg-emerald-500 text-black text-sm font-bold hover:bg-emerald-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {submitState === 'submitting' ? 'Submitting...' : 'Submit quote request →'}
-              </button>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <button
+                  type="button"
+                  onClick={handleSubmit}
+                  disabled={submitState === 'submitting' || !contactName.trim() || !email.trim()}
+                  className="flex-1 py-4 rounded-xl bg-emerald-500 text-black text-sm font-bold hover:bg-emerald-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {submitState === 'submitting' ? 'Submitting...' : editId ? 'Submit quote request' : 'Submit quote request →'}
+                </button>
+                {user && (
+                  <button
+                    type="button"
+                    onClick={handleSaveDraft}
+                    disabled={submitState === 'submitting'}
+                    className="py-4 px-6 rounded-xl border border-zinc-600 text-zinc-300 text-sm font-medium hover:bg-zinc-800 disabled:opacity-50 transition-colors"
+                  >
+                    Save as draft
+                  </button>
+                )}
+              </div>
               {(!contactName.trim() || !email.trim()) && (
                 <p className="text-center text-[10px] text-amber-500/80 mt-3">
                   Fill in your name and email above to submit.

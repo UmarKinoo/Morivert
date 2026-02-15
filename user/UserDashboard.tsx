@@ -15,6 +15,7 @@ interface PendingImpactPayload {
 }
 
 const STATUS_STYLES: Record<string, string> = {
+  draft: 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20',
   new: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
   in_progress: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
   completed: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
@@ -22,6 +23,7 @@ const STATUS_STYLES: Record<string, string> = {
 };
 
 const STATUS_LABELS: Record<string, string> = {
+  draft: 'Draft',
   new: 'New',
   in_progress: 'In Progress',
   completed: 'Completed',
@@ -42,6 +44,9 @@ export const UserDashboard: React.FC = () => {
   const [emailLoading, setEmailLoading] = useState(false);
   const [emailMessage, setEmailMessage] = useState('');
   const [emailError, setEmailError] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   const readPendingImpact = useCallback(() => {
     try {
@@ -124,6 +129,15 @@ export const UserDashboard: React.FC = () => {
     setEmailLoading(false);
   };
 
+  const handleDeleteQuote = async (id: string) => {
+    const { error } = await supabase.from('quotes').delete().eq('id', id);
+    if (!error) {
+      setExpandedId((prev) => (prev === id ? null : prev));
+      setDeleteConfirmId(null);
+      fetchQuotes();
+    }
+  };
+
   const handleDownloadImpactPDF = () => {
     if (!pendingImpact) return;
     generateImpactReportPDF({
@@ -175,6 +189,24 @@ export const UserDashboard: React.FC = () => {
     if (parsed.length === 1) return parsed[0].label || parsed[0].product;
     return `${parsed[0].label || parsed[0].product} +${parsed.length - 1} more`;
   };
+
+  const filteredQuotes = useMemo(() => {
+    let list = quotes;
+    if (statusFilter !== 'all') {
+      list = list.filter((q) => q.status === statusFilter);
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      list = list.filter(
+        (quote) =>
+          quote.contact_name?.toLowerCase().includes(q) ||
+          quote.company_name?.toLowerCase().includes(q) ||
+          quote.email?.toLowerCase().includes(q) ||
+          (quote as any).category?.toLowerCase().includes(q)
+      );
+    }
+    return list;
+  }, [quotes, statusFilter, searchQuery]);
 
   const totalImpact = quotes.reduce(
     (acc, q) => ({
@@ -299,6 +331,35 @@ export const UserDashboard: React.FC = () => {
           )}
         </div>
 
+        {/* List / search / filter */}
+        <div className="flex flex-col sm:flex-row gap-3 mb-6">
+          <input
+            type="search"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search by name, company, email, category…"
+            className="flex-1 px-4 py-2.5 bg-zinc-900 border border-zinc-800 rounded-xl text-sm text-white placeholder-zinc-500 outline-none focus:border-emerald-500"
+          />
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="px-4 py-2.5 bg-zinc-900 border border-zinc-800 rounded-xl text-sm text-zinc-300 outline-none focus:border-emerald-500"
+          >
+            <option value="all">All statuses</option>
+            <option value="draft">Draft</option>
+            <option value="new">New</option>
+            <option value="in_progress">In Progress</option>
+            <option value="completed">Completed</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+          <button
+            onClick={() => navigate('/quote')}
+            className="px-4 py-2.5 bg-emerald-500 text-black text-sm font-semibold rounded-xl hover:bg-emerald-400 transition-colors"
+          >
+            Create quote
+          </button>
+        </div>
+
         {/* Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
           <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-xl p-4">
@@ -324,25 +385,31 @@ export const UserDashboard: React.FC = () => {
           <div className="flex items-center justify-center py-20">
             <div className="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
           </div>
-        ) : quotes.length === 0 ? (
+        ) : filteredQuotes.length === 0 ? (
           <div className="text-center py-20">
             <div className="w-16 h-16 bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-4">
               <svg className="w-7 h-7 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
               </svg>
             </div>
-            <h3 className="text-lg font-light text-white mb-2">No quotes yet</h3>
-            <p className="text-sm text-zinc-500 mb-6">Submit your first quote to see it here.</p>
-            <button
-              onClick={() => navigate('/quote')}
-              className="text-sm bg-emerald-500 text-black font-semibold px-6 py-3 rounded-xl hover:bg-emerald-400 transition-colors"
-            >
-              Get a Quote
-            </button>
+            <h3 className="text-lg font-light text-white mb-2">
+              {quotes.length === 0 ? 'No quotes yet' : 'No quotes match your search'}
+            </h3>
+            <p className="text-sm text-zinc-500 mb-6">
+              {quotes.length === 0 ? 'Submit your first quote or save a draft.' : 'Try a different search or filter.'}
+            </p>
+            {quotes.length === 0 && (
+              <button
+                onClick={() => navigate('/quote')}
+                className="text-sm bg-emerald-500 text-black font-semibold px-6 py-3 rounded-xl hover:bg-emerald-400 transition-colors"
+              >
+                Create quote
+              </button>
+            )}
           </div>
         ) : (
           <div className="space-y-3">
-            {quotes.map((quote) => {
+            {filteredQuotes.map((quote) => {
               const isExpanded = expandedId === quote.id;
               const items: QuoteLineItem[] = Array.isArray(quote.line_items)
                 ? quote.line_items
@@ -421,7 +488,15 @@ export const UserDashboard: React.FC = () => {
                       </div>
 
                       {/* Actions */}
-                      <div className="flex items-center gap-3">
+                      <div className="flex flex-wrap items-center gap-3">
+                        {(quote.status === 'draft' || quote.status === 'new') && (
+                          <button
+                            onClick={() => navigate(`/quote?id=${quote.id}`)}
+                            className="flex items-center gap-2 text-xs font-medium text-zinc-300 hover:text-white transition-colors bg-zinc-800 px-4 py-2.5 rounded-lg border border-zinc-700"
+                          >
+                            Edit
+                          </button>
+                        )}
                         <button
                           onClick={() => handleDownloadPDF(quote)}
                           className="flex items-center gap-2 text-xs font-medium text-emerald-400 hover:text-emerald-300 transition-colors bg-emerald-500/10 px-4 py-2.5 rounded-lg border border-emerald-500/20"
@@ -431,6 +506,29 @@ export const UserDashboard: React.FC = () => {
                           </svg>
                           Download PDF
                         </button>
+                        {deleteConfirmId === quote.id ? (
+                          <span className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleDeleteQuote(quote.id!)}
+                              className="text-xs font-medium text-red-400 hover:text-red-300"
+                            >
+                              Confirm delete
+                            </button>
+                            <button
+                              onClick={() => setDeleteConfirmId(null)}
+                              className="text-xs text-zinc-500 hover:text-zinc-400"
+                            >
+                              Cancel
+                            </button>
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => setDeleteConfirmId(quote.id!)}
+                            className="text-xs font-medium text-zinc-500 hover:text-red-400 transition-colors"
+                          >
+                            Delete
+                          </button>
+                        )}
                         <span className="text-[10px] text-zinc-600">
                           #{quote.id?.slice(0, 8).toUpperCase()}
                         </span>

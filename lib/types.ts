@@ -1,4 +1,4 @@
-export type QuoteStatus = 'new' | 'in_progress' | 'completed' | 'cancelled';
+export type QuoteStatus = 'draft' | 'new' | 'in_progress' | 'completed' | 'cancelled';
 
 export interface QuoteLineItem {
   product: string;
@@ -37,4 +37,8 @@ export interface QuoteSubmission {
   /* Admin */
   status: QuoteStatus;
   admin_notes?: string;
+
+  /* Optional */
+  category?: string;
+  tags?: string[];
 }
