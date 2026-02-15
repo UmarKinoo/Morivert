@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import { useToast } from './Toast';
 import type { QuoteLineItem, QuoteSubmission } from '../lib/types';
 import type { User } from '@supabase/supabase-js';
 import type { ViewType } from '../App';
@@ -79,6 +80,7 @@ type SubmitState = 'idle' | 'submitting' | 'success' | 'error';
 
 export const QuoteBuilderPage: React.FC = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [searchParams] = useSearchParams();
   const editId = searchParams.get('id') || null;
 
@@ -275,6 +277,7 @@ export const QuoteBuilderPage: React.FC = () => {
         return;
       }
       setSubmitState('idle');
+      toast('Draft saved.', 'success');
       navigate('/dashboard');
       return;
     }
@@ -285,6 +288,7 @@ export const QuoteBuilderPage: React.FC = () => {
       return;
     }
     setSubmitState('idle');
+    toast('Draft saved.', 'success');
     navigate('/dashboard');
   };
 

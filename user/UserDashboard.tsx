@@ -62,6 +62,14 @@ export const UserDashboard: React.FC = () => {
     }
   }, [userMenuOpen]);
 
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setUserMenuOpen(false);
+    };
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, []);
+
   const readPendingImpact = useCallback(() => {
     try {
       const raw = sessionStorage.getItem(PENDING_IMPACT_KEY);

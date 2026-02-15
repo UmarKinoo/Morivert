@@ -10,12 +10,13 @@ import { UserDashboard } from './user/UserDashboard';
 import { UserAuthGuard } from './user/UserAuthGuard';
 import { ProfilePage } from './user/ProfilePage';
 import { QuoteBuilderPage } from './components/QuoteBuilderPage';
+import { NotFoundPage } from './components/NotFoundPage';
 
 export default function AppRouter() {
   return (
     <Routes>
       {/* Public */}
-      <Route path="/*" element={<App />} />
+      <Route path="/" element={<App />} />
       <Route path="/login" element={<UserLogin />} />
       <Route path="/reset-password" element={<ResetPassword />} />
 
@@ -49,6 +50,9 @@ export default function AppRouter() {
           </AuthGuard>
         }
       />
+
+      {/* 404 catch-all */}
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
 }

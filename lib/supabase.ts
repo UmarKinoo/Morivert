@@ -11,14 +11,22 @@ if (!hasCredentials) {
   );
 }
 
+/** Auth options: session persisted in localStorage, auto-refresh token, detect session in URL (magic link / reset). */
+const authOptions = {
+  persistSession: true,
+  autoRefreshToken: true,
+  detectSessionInUrl: true,
+  storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+};
+
 function createSupabaseClient(): SupabaseClient {
   try {
     const url = hasCredentials ? supabaseUrl! : 'https://placeholder.supabase.co';
     const key = hasCredentials ? supabaseAnonKey! : 'placeholder-anon-key';
-    return createClient(url, key);
+    return createClient(url, key, { auth: authOptions });
   } catch (e) {
     console.error('Supabase client init failed:', e);
-    return createClient('https://placeholder.supabase.co', 'placeholder-anon-key');
+    return createClient('https://placeholder.supabase.co', 'placeholder-anon-key', { auth: authOptions });
   }
 }
 

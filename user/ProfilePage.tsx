@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import { useToast } from '../components/Toast';
 import type { User } from '@supabase/supabase-js';
 
 const Section: React.FC<{ title: string; description?: string; children: React.ReactNode }> = ({
@@ -17,6 +18,7 @@ const Section: React.FC<{ title: string; description?: string; children: React.R
 
 export const ProfilePage: React.FC = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -32,6 +34,8 @@ export const ProfilePage: React.FC = () => {
   const [passwordError, setPasswordError] = useState('');
 
   const [signOutLoading, setSignOutLoading] = useState(false);
+  const [deleteStep, setDeleteStep] = useState<'idle' | 'confirm' | 'deleting'>('idle');
+  const [deleteError, setDeleteError] = useState('');
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -56,6 +60,7 @@ export const ProfilePage: React.FC = () => {
       return;
     }
     setEmailMessage('Check your new email to verify. You may need to sign in again.');
+    toast('Verification email sent to your new address.', 'success');
     setNewEmail('');
     setEmailLoading(false);
   };
@@ -80,6 +85,7 @@ export const ProfilePage: React.FC = () => {
       return;
     }
     setPasswordMessage('Password updated.');
+    toast('Password updated successfully.', 'success');
     setNewPassword('');
     setConfirmPassword('');
     setPasswordLoading(false);
@@ -90,6 +96,19 @@ export const ProfilePage: React.FC = () => {
     await supabase.auth.signOut();
     navigate('/');
     setSignOutLoading(false);
+  };
+
+  const handleDeleteAccount = async () => {
+    setDeleteError('');
+    setDeleteStep('deleting');
+    const { error } = await supabase.rpc('delete_my_account');
+    if (error) {
+      setDeleteError(error.message);
+      setDeleteStep('confirm');
+      return;
+    }
+    await supabase.auth.signOut();
+    navigate('/');
   };
 
   if (loading) {
@@ -277,7 +296,7 @@ export const ProfilePage: React.FC = () => {
           </div>
         </Section>
 
-        {/* Danger zone */}
+        {/* Sign out */}
         <Section title="Sign out" description="Sign out of your account on this device.">
           <div className="p-6 rounded-xl bg-zinc-900/50 border border-zinc-800/50">
             <button
@@ -287,6 +306,48 @@ export const ProfilePage: React.FC = () => {
             >
               {signOutLoading ? 'Signing out…' : 'Sign out'}
             </button>
+          </div>
+        </Section>
+
+        {/* Danger zone */}
+        <Section title="Danger zone" description="Permanently delete your account and all associated data. This cannot be undone.">
+          <div className="p-6 rounded-xl bg-red-500/5 border border-red-500/20 space-y-4">
+            {deleteStep === 'idle' && (
+              <button
+                onClick={() => setDeleteStep('confirm')}
+                className="text-sm font-medium text-red-400 hover:text-red-300 transition-colors"
+              >
+                Delete my account
+              </button>
+            )}
+            {deleteStep === 'confirm' && (
+              <div className="space-y-3">
+                <p className="text-sm text-zinc-400">
+                  Are you sure? This will permanently delete your account, all your quotes, and all associated data. This action cannot be reversed.
+                </p>
+                {deleteError && <p className="text-sm text-red-400">{deleteError}</p>}
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={handleDeleteAccount}
+                    className="px-4 py-2 rounded-lg text-sm font-semibold text-white bg-red-600 hover:bg-red-500 transition-colors"
+                  >
+                    Yes, delete my account
+                  </button>
+                  <button
+                    onClick={() => { setDeleteStep('idle'); setDeleteError(''); }}
+                    className="px-4 py-2 rounded-lg text-sm text-zinc-400 hover:text-white transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+            {deleteStep === 'deleting' && (
+              <div className="flex items-center gap-3">
+                <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
+                <span className="text-sm text-zinc-400">Deleting account…</span>
+              </div>
+            )}
           </div>
         </Section>
 

@@ -1,6 +1,7 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import { getIsAdmin } from '../lib/auth/roles';
 import { cn } from '../lib/cn';
 import type { QuoteSubmission, QuoteStatus } from '../lib/types';
 import { format } from 'date-fns';
@@ -28,6 +29,7 @@ const STATUS_CONFIG: Record<QuoteStatus, { label: string; color: string; bg: str
 
 export const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
+  const [authorized, setAuthorized] = useState<boolean | null>(null);
   const [quotes, setQuotes] = useState<QuoteSubmission[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<QuoteStatus | 'all'>('all');
@@ -38,6 +40,13 @@ export const AdminDashboard: React.FC = () => {
   const [inviteLoading, setInviteLoading] = useState(false);
   const [inviteMessage, setInviteMessage] = useState('');
   const [inviteError, setInviteError] = useState('');
+
+  useEffect(() => {
+    getIsAdmin().then((ok) => {
+      setAuthorized(ok);
+      if (!ok) navigate('/', { replace: true });
+    });
+  }, [navigate]);
 
   const fetchQuotes = async () => {
     setRefreshing(true);
@@ -78,6 +87,12 @@ export const AdminDashboard: React.FC = () => {
     fetchQuotes();
     if (selectedQuote?.id === id) {
       setSelectedQuote((prev) => (prev ? { ...prev, status } : null));
+    }
+    const quote = quotes.find((q) => q.id === id);
+    if (quote?.email && status !== 'draft') {
+      supabase.functions.invoke('notify-quote-status', {
+        body: { email: quote.email, contact_name: quote.contact_name, status, id },
+      }).catch((err) => console.error('[Morivert] Status email failed:', err));
     }
   };
 
@@ -196,6 +211,14 @@ export const AdminDashboard: React.FC = () => {
     a.click();
     URL.revokeObjectURL(url);
   };
+
+  if (authorized === null || authorized === false) {
+    return (
+      <div className="min-h-screen bg-[#09090b] flex items-center justify-center">
+        <div className="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#09090b] text-zinc-100">
@@ -436,6 +459,14 @@ const QuoteDrawer: React.FC<{
 }> = ({ quote, onClose, onStatusChange, onNotesChange, onDelete }) => {
   const [notes, setNotes] = useState(quote.admin_notes || '');
   const [deleteConfirm, setDeleteConfirm] = useState(false);
+
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [onClose]);
 
   return (
     <>
