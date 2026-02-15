@@ -1,0 +1,11 @@
+{
+  "name": "Morivert — Plantable Stationery",
+  "short_name": "Morivert",
+  "description": "Plantable pencils, notebooks and pens crafted from recycled paper in Mauritius.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#050505",
+  "theme_color": "#050505",
+  "icons": [],
+  "categories": ["business", "shopping", "lifestyle"]
+}

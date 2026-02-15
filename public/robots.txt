@@ -1,0 +1,6 @@
+# Morivert — https://morivert.io
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://morivert.io/sitemap.xml

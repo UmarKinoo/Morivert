@@ -1,15 +1,120 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" dir="ltr">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Morivert | Write. Plant. Grow.</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+    <!-- Primary Meta -->
+    <title>Morivert — Plantable Stationery from Mauritius | Write. Plant. Grow.</title>
+    <meta name="description" content="Morivert crafts plantable pencils, notebooks, calendars and pens from recycled paper in Mauritius. Custom-made for brands, schools and institutions. Climate Launchpad & PwC Sustainability Award winner." />
+    <meta name="keywords" content="Morivert, plantable pencils, plantable stationery, recycled paper, eco-friendly stationery, Mauritius, sustainable stationery, corporate gifts, custom pencils, climate positive, circular economy" />
+    <meta name="author" content="Morivert Co Ltd" />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://morivert.io/" />
+
+    <!-- Theme & Mobile -->
+    <meta name="theme-color" content="#050505" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Morivert" />
+    <meta name="application-name" content="Morivert" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <link rel="manifest" href="/site.webmanifest" />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://morivert.io/" />
+    <meta property="og:title" content="Morivert — Plantable Stationery from Mauritius" />
+    <meta property="og:description" content="Plantable pencils, notebooks and pens crafted from recycled paper. Custom-made for brands, schools and institutions. Write it. Plant it. Grow it." />
+    <meta property="og:image" content="https://morivert.io/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:site_name" content="Morivert" />
+    <meta property="og:locale" content="en_US" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content="https://morivert.io/" />
+    <meta name="twitter:title" content="Morivert — Plantable Stationery from Mauritius" />
+    <meta name="twitter:description" content="Plantable pencils, notebooks and pens crafted from recycled paper. Custom-made for brands, schools and institutions." />
+    <meta name="twitter:image" content="https://morivert.io/og-image.png" />
+
+    <!-- Structured Data: Organization -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "Morivert",
+      "legalName": "Morivert Co Ltd",
+      "url": "https://morivert.io",
+      "description": "Plantable stationery crafted from recycled paper in Mauritius. Climate Launchpad winner, PwC Sustainability Award recipient.",
+      "foundingDate": "2021",
+      "foundingLocation": {
+        "@type": "Place",
+        "address": {
+          "@type": "PostalAddress",
+          "addressLocality": "Port Louis",
+          "addressCountry": "MU"
+        }
+      },
+      "areaServed": "Worldwide",
+      "knowsAbout": ["plantable stationery", "recycled paper products", "circular economy", "sustainable corporate gifts"],
+      "award": [
+        "ClimateLaunchpad 2022 Winner",
+        "PwC Sustainability Award 2024",
+        "National Innovation Challenge Award",
+        "Mandela Washington Fellowship"
+      ],
+      "sameAs": []
+    }
+    </script>
+
+    <!-- Structured Data: Product (plantable pencils) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Product",
+      "name": "Morivert Plantable Pencils",
+      "description": "Pencils made from recycled paper with embedded non-GMO seeds. Write with them, then plant the stub to grow herbs, flowers or vegetables.",
+      "brand": {
+        "@type": "Brand",
+        "name": "Morivert"
+      },
+      "manufacturer": {
+        "@type": "Organization",
+        "name": "Morivert Co Ltd"
+      },
+      "category": "Stationery",
+      "material": "Recycled Paper",
+      "isRelatedTo": {
+        "@type": "Thing",
+        "name": "Sustainability"
+      },
+      "countryOfOrigin": {
+        "@type": "Country",
+        "name": "Mauritius"
+      }
+    }
+    </script>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
   </head>
   <body>
     <div id="root"></div>
+    <!-- Fallback for crawlers / JS-disabled browsers -->
+    <noscript>
+      <div style="padding:3rem;text-align:center;font-family:sans-serif;background:#050505;color:#fff;min-height:100vh">
+        <h1>Morivert — Plantable Stationery from Mauritius</h1>
+        <p>Plantable pencils, notebooks, calendars and pens crafted from recycled paper. Custom-made for brands, schools and institutions.</p>
+        <p>Climate Launchpad 2022 Winner &middot; PwC Sustainability Award 2024</p>
+        <p><strong>Write it. Plant it. Grow it.</strong></p>
+        <p>Products: Plantable Pencils &middot; Plantable Notebooks &middot; Plantable Calendars &middot; Invitation Cards &middot; Paper Pens</p>
+        <p>Contact: <a href="https://morivert.io" style="color:#10b981">morivert.io</a> &middot; Port Louis, Mauritius</p>
+      </div>
+    </noscript>
     <script type="module" src="/index.tsx"></script>
   </body>
 </html>

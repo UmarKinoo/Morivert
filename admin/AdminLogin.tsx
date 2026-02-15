@@ -51,7 +51,7 @@ export const AdminLogin: React.FC = () => {
               required
               autoFocus
               className="w-full px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-xl text-sm text-white placeholder-zinc-600 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
-              placeholder="admin@morivert.com"
+              placeholder="admin@morivert.io"
             />
           </div>
           <div>
