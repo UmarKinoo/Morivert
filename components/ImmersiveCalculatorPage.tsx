@@ -169,7 +169,7 @@ export const ImmersiveCalculatorPage: React.FC = () => {
               maxDistance={15}
             />
             
-            <Environment preset="forest" intensity={0.5} />
+            <Environment files="/hdri/forest_slope_1k.hdr" intensity={0.5} />
             {/* Fix: Using capitalized constants for lights */}
             <AmbientLight intensity={0.2} />
             <SpotLight position={[10, 15, 10]} angle={0.3} penumbra={1} intensity={1.5} castShadow />

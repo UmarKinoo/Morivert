@@ -144,7 +144,7 @@ function App() {
               </>
             ) : (
               <>
-                <Environment preset="studio" intensity={0.5} />
+                <Environment files="/hdri/studio_small_03_1k.hdr" intensity={0.5} />
                 <AmbientLight intensity={0.2} />
                 <SpotLight position={[10, 10, 10]} angle={0.15} penumbra={1} intensity={1} castShadow />
               </>
